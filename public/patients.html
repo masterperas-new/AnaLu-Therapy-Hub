@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnaLu Therapy Hub - Patient Registry</title>
+    <link rel="stylesheet" href="/app-shell.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="app-header">
+        <svg class="app-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="#e6f5f2" stroke="#0f766e" stroke-width="2"/>
+          <path d="M32 14v36M22 24c0-6 20-6 20 0M16 34c0 10 8 16 16 16s16-6 16-16" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="28" y="22" width="8" height="20" rx="2" fill="#0f766e" opacity=".15"/>
+          <rect x="22" y="28" width="20" height="8" rx="2" fill="#0f766e" opacity=".15"/>
+        </svg>
+        <div class="app-header-text">
+          <h1 class="app-title">AnaLu Therapy Hub</h1>
+          <p class="page-subtitle">Patient Registry</p>
+        </div>
+      </header>
+
+      <nav class="main-nav">
+        <a href="/index.html">Schedule Hub</a>
+        <a href="/appointments.html">Appointment Management</a>
+        <a href="/patients.html">Patient Registry</a>
+        <a href="/revenue.html">Revenue Control</a>
+        <a href="/settings.html">Configuration</a>
+        <a href="/users.html" data-admin-only>User Management</a>
+        <a href="/profile.html">My Profile</a>
+        <button type="button" class="logout-btn">Logout</button>
+      </nav>
+
+      <section id="login-view" class="card stack">
+        <h2>Secure Access</h2>
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" required autocomplete="username" />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+          <button type="submit">Sign In</button>
+        </form>
+      </section>
+
+      <section id="app-content" class="hidden stack">
+        <section class="card">
+          <div class="results-header">
+            <h2>Patients <span id="patient-filter-summary" class="filter-summary"></span></h2>
+            <button type="button" id="new-patient" class="action-create-blue">New Patient</button>
+          </div>
+          <form id="search-form" class="filter-grid" style="margin-bottom:10px">
+            <div>
+              <label for="search">Search</label>
+              <input id="search" name="search" type="text" placeholder="Name or condition" />
+            </div>
+            <div class="filter-actions">
+              <button type="submit">Search</button>
+              <button type="button" id="clear-search" class="outline">Clear</button>
+            </div>
+          </form>
+          <div class="table-wrap">
+            <table class="appt-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Condition</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Balance</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="patients-table-body"></tbody>
+            </table>
+          </div>
+          <div id="patients-pager" class="pager hidden">
+            <button type="button" id="patients-pager-prev" class="outline pager-btn">&lsaquo; Prev</button>
+            <span id="patients-pager-info" class="pager-info"></span>
+            <button type="button" id="patients-pager-next" class="outline pager-btn">Next &rsaquo;</button>
+          </div>
+        </section>
+
+        <!-- Patient editor drawer -->
+        <div id="patient-editor-overlay" class="editor-overlay hidden"></div>
+        <aside id="patient-editor-drawer" class="editor-drawer hidden" aria-hidden="true">
+          <div class="editor-drawer-head">
+            <h2 id="patient-editor-title">New Patient</h2>
+            <button type="button" id="close-patient-editor" class="outline">Close</button>
+          </div>
+          <form id="client-form" class="grid-2">
+            <input id="editClientId" type="hidden" />
+            <div>
+              <label for="fullName">Full Name</label>
+              <input id="fullName" name="fullName" type="text" required />
+            </div>
+            <div>
+              <label for="phone">Phone</label>
+              <input id="phone" name="phone" type="text" />
+            </div>
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" />
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label for="conditionNotes">Condition Notes</label>
+              <textarea id="conditionNotes" name="conditionNotes" rows="3" required></textarea>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="action-save">Save Patient</button>
+            </div>
+          </form>
+
+          <!-- Comments section (visible only when editing) -->
+          <div id="comments-section" class="hidden" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+            <div class="results-header">
+              <h3>Comments</h3>
+              <button type="button" id="new-comment-btn" class="action-create-blue" style="font-size:0.78rem;padding:4px 10px">+ Add Comment</button>
+            </div>
+            <div id="comment-form-wrap" class="hidden" style="margin-bottom:8px">
+              <form id="comment-form" class="grid-2">
+                <input id="commentId" type="hidden" />
+                <div>
+                  <label for="commentDate">Date</label>
+                  <input id="commentDate" name="commentDate" type="date" required />
+                </div>
+                <div style="grid-column: 1 / -1;">
+                  <label for="commentBody">Comment</label>
+                  <textarea id="commentBody" name="commentBody" rows="2" required></textarea>
+                </div>
+                <div style="grid-column: 1 / -1; display:flex; gap:8px">
+                  <button type="submit" class="action-save" style="font-size:0.78rem;padding:4px 10px">Save Comment</button>
+                  <button type="button" id="cancel-comment" class="outline" style="font-size:0.78rem;padding:4px 10px">Cancel</button>
+                </div>
+              </form>
+            </div>
+            <input type="text" id="comments-search" placeholder="Search comments…" style="margin-bottom:6px" />
+            <div class="table-wrap">
+              <table class="appt-table" style="min-width:auto">
+                <thead>
+                  <tr>
+                    <th style="width:100px">Date</th>
+                    <th>Comment</th>
+                    <th style="width:100px"></th>
+                  </tr>
+                </thead>
+                <tbody id="comments-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Appointments drawer -->
+        <div id="history-overlay" class="editor-overlay hidden"></div>
+        <aside id="history-drawer" class="editor-drawer hidden" aria-hidden="true">
+          <div class="editor-drawer-head">
+            <h2 id="history-title">Patient Appointments</h2>
+            <button type="button" id="close-history" class="outline">Close</button>
+          </div>
+          <div class="stack">
+            <div id="history-info" class="patient-info-card"></div>
+
+            <div class="results-header" style="margin-top:4px">
+              <h3>Appointments</h3>
+              <button type="button" id="new-appt-for-patient" class="action-create-blue" style="font-size:0.78rem;padding:4px 10px">+ New Appointment</button>
+            </div>
+            <input type="text" id="history-search" placeholder="Search appointments…" style="margin-bottom:6px" />
+            <div class="table-wrap">
+              <table class="appt-table" style="min-width:520px">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Duration</th>
+                    <th>Fee</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <p id="message" class="message"></p>
+    </main>
+
+    <script src="/common.js"></script>
+    <script src="/patients.js"></script>
+  </body>
+</html>

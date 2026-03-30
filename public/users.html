@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnaLu Therapy Hub - User Management</title>
+    <link rel="stylesheet" href="/app-shell.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="app-header">
+        <svg class="app-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="#e6f5f2" stroke="#0f766e" stroke-width="2"/>
+          <path d="M32 14v36M22 24c0-6 20-6 20 0M16 34c0 10 8 16 16 16s16-6 16-16" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="28" y="22" width="8" height="20" rx="2" fill="#0f766e" opacity=".15"/>
+          <rect x="22" y="28" width="20" height="8" rx="2" fill="#0f766e" opacity=".15"/>
+        </svg>
+        <div class="app-header-text">
+          <h1 class="app-title">AnaLu Therapy Hub</h1>
+          <p class="page-subtitle">User Management</p>
+        </div>
+      </header>
+
+      <nav class="main-nav">
+        <a href="/index.html">Schedule Hub</a>
+        <a href="/appointments.html">Appointment Management</a>
+        <a href="/patients.html">Patient Registry</a>
+        <a href="/revenue.html">Revenue Control</a>
+        <a href="/settings.html">Configuration</a>
+        <a href="/users.html" data-admin-only>User Management</a>
+        <a href="/profile.html">My Profile</a>
+        <button type="button" class="logout-btn">Logout</button>
+      </nav>
+
+      <section id="login-view" class="card stack">
+        <h2>Secure Access</h2>
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" required autocomplete="username" />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+          <button type="submit">Sign In</button>
+        </form>
+      </section>
+
+      <section id="app-content" class="hidden stack">
+        <!-- Add User Form -->
+        <section class="card">
+          <h2>Add User</h2>
+          <form id="add-user-form" class="grid-2">
+            <div>
+              <label for="newFullName">Full Name</label>
+              <input id="newFullName" name="fullName" type="text" required />
+            </div>
+            <div>
+              <label for="newUsername">Username</label>
+              <input id="newUsername" name="username" type="text" required />
+            </div>
+            <div>
+              <label for="newPassword">Password</label>
+              <input id="newPassword" name="password" type="password" required minlength="4" />
+            </div>
+            <div>
+              <label for="newPhone">Phone</label>
+              <input id="newPhone" name="phone" type="tel" pattern="^\+?[0-9\s\-]{7,20}$" placeholder="+351 9XX XXX XXX" />
+            </div>
+            <div>
+              <label for="newRole">Role</label>
+              <select id="newRole" name="role">
+                <option value="therapist">Therapist</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:end">
+              <button type="submit" class="action-save" style="width:100%">Create User</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- User List -->
+        <section class="card">
+          <h2>Users</h2>
+          <div class="table-wrap">
+            <table class="appt-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Phone</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- Edit user drawer -->
+      <div id="user-editor-overlay" class="editor-overlay hidden"></div>
+      <aside id="user-editor-drawer" class="editor-drawer hidden" aria-hidden="true">
+        <div class="editor-drawer-head">
+          <h2>Edit User</h2>
+          <button type="button" id="close-user-editor" class="outline">Close</button>
+        </div>
+        <form id="edit-user-form" class="grid-2">
+          <input id="editUserId" type="hidden" />
+          <div>
+            <label for="editFullName">Full Name</label>
+            <input id="editFullName" name="fullName" type="text" required />
+          </div>
+          <div>
+            <label for="editUsername">Username</label>
+            <input id="editUsername" type="text" disabled />
+          </div>
+          <div>
+            <label for="editPhone">Phone</label>
+            <input id="editPhone" name="phone" type="tel" pattern="^\+?[0-9\s\-]{7,20}$" placeholder="+351 9XX XXX XXX" />
+          </div>
+          <div>
+            <label for="editRole">Role</label>
+            <select id="editRole" name="role">
+              <option value="therapist">Therapist</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1;display:flex;gap:8px">
+            <button type="submit" class="action-save">Save Changes</button>
+            <button type="button" id="block-user-btn" class="outline action-delete">Block User</button>
+          </div>
+        </form>
+      </aside>
+
+      <p id="message" class="message"></p>
+    </main>
+
+    <script src="/common.js"></script>
+    <script src="/users.js"></script>
+  </body>
+</html>

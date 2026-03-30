@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnaLu Therapy Hub - Appointment Management</title>
+    <link rel="stylesheet" href="/app-shell.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="app-header">
+        <svg class="app-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="#e6f5f2" stroke="#0f766e" stroke-width="2"/>
+          <path d="M32 14v36M22 24c0-6 20-6 20 0M16 34c0 10 8 16 16 16s16-6 16-16" stroke="#0f766e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="28" y="22" width="8" height="20" rx="2" fill="#0f766e" opacity=".15"/>
+          <rect x="22" y="28" width="20" height="8" rx="2" fill="#0f766e" opacity=".15"/>
+        </svg>
+        <div class="app-header-text">
+          <h1 class="app-title">AnaLu Therapy Hub</h1>
+          <p class="page-subtitle">Appointment Management</p>
+        </div>
+      </header>
+
+      <nav class="main-nav">
+        <a href="/index.html">Schedule Hub</a>
+        <a href="/appointments.html">Appointment Management</a>
+        <a href="/patients.html">Patient Registry</a>
+        <a href="/revenue.html">Revenue Control</a>
+        <a href="/settings.html">Configuration</a>
+        <a href="/users.html" data-admin-only>User Management</a>
+        <a href="/profile.html">My Profile</a>
+        <button type="button" class="logout-btn">Logout</button>
+      </nav>
+
+      <section id="login-view" class="card stack">
+        <h2>Secure Access</h2>
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" required autocomplete="username" />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+          <button type="submit">Sign In</button>
+        </form>
+      </section>
+
+      <section id="app-content" class="hidden stack">
+        <section class="card">
+          <h2>Filters</h2>
+          <form id="filter-form" class="filter-grid">
+            <div>
+              <label for="q">Search</label>
+              <input id="q" name="q" type="text" placeholder="Patient or comment" />
+            </div>
+            <div>
+              <label for="filterClientId">Patient</label>
+              <select id="filterClientId" name="clientId"></select>
+            </div>
+            <div>
+              <label for="wireReceived">Payment</label>
+              <select id="wireReceived" name="wireReceived">
+                <option value="">All</option>
+                <option value="1">Paid</option>
+                <option value="0">Owed</option>
+              </select>
+            </div>
+            <div>
+              <label for="filterPaymentType">Payment Type</label>
+              <select id="filterPaymentType" name="paymentType">
+                <option value="">All</option>
+                <option value="Cash">Cash</option>
+                <option value="MBWay">MBWay</option>
+                <option value="Card">Card</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+            </div>
+            <div class="date-filter-inline">
+              <div>
+                <label for="from">From</label>
+                <input id="from" name="from" type="date" />
+              </div>
+              <div>
+                <label for="to">To</label>
+                <input id="to" name="to" type="date" />
+              </div>
+            </div>
+            <div class="filter-actions">
+              <button type="submit">Apply Filters</button>
+              <button type="button" id="clear-filters" class="outline">Clear Filters</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="results-header">
+            <h2>Appointments <span id="filter-summary" class="filter-summary"></span></h2>
+            <button type="button" id="new-appointment" class="action-create-blue">New Appointment</button>
+          </div>
+          <div class="table-wrap">
+            <table class="appt-table">
+              <thead>
+                <tr>
+                  <th><button type="button" class="sort-btn" data-sort-key="appointment_date">Date</button></th>
+                  <th><button type="button" class="sort-btn" data-sort-key="full_name">Patient</button></th>
+                  <th><button type="button" class="sort-btn" data-sort-key="location">Address</button></th>
+                  <th><button type="button" class="sort-btn" data-sort-key="duration_minutes">Duration</button></th>
+                  <th><button type="button" class="sort-btn" data-sort-key="fee_cents">Fee</button></th>
+                  <th><button type="button" class="sort-btn" data-sort-key="wire_received">Status</button></th>
+                  <th><button type="button" class="sort-btn" data-sort-key="payment_type">Type</button></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="appointments-table-body"></tbody>
+            </table>
+          </div>
+          <div id="pager" class="pager hidden">
+            <button type="button" id="pager-prev" class="outline pager-btn">&lsaquo; Prev</button>
+            <span id="pager-info" class="pager-info"></span>
+            <button type="button" id="pager-next" class="outline pager-btn">Next &rsaquo;</button>
+          </div>
+        </section>
+
+        <div id="editor-overlay" class="editor-overlay hidden"></div>
+        <aside id="editor-drawer" class="editor-drawer hidden" aria-hidden="true">
+          <div class="editor-drawer-head">
+            <h2 id="editor-title">Edit Appointment</h2>
+            <button type="button" id="close-editor" class="outline">Close</button>
+          </div>
+          <form id="appointment-form" class="grid-2">
+            <input id="appointmentId" type="hidden" />
+            <div>
+              <label for="clientId">Patient</label>
+              <select id="clientId" name="clientId" required></select>
+            </div>
+            <div>
+              <label for="appointmentDate">Date and Time</label>
+              <input id="appointmentDate" name="appointmentDate" type="datetime-local" required />
+            </div>
+            <div>
+              <label for="address">Address</label>
+              <input id="address" name="address" type="text" required />
+            </div>
+            <div>
+              <label for="durationMinutes">Duration (minutes)</label>
+              <input id="durationMinutes" name="durationMinutes" type="number" min="1" value="60" required />
+            </div>
+            <div>
+              <label for="feeAmount">Fee (EUR)</label>
+              <input id="feeAmount" name="feeAmount" type="number" min="0" step="0.01" required />
+            </div>
+            <div>
+              <label for="paymentType">Payment Type</label>
+              <select id="paymentType" name="paymentType">
+                <option value="">Not set</option>
+                <option value="Cash">Cash</option>
+                <option value="MBWay">MBWay</option>
+                <option value="Card">Card</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+            </div>
+            <div>
+              <label for="wireReceivedEdit">Payment Received</label>
+              <select id="wireReceivedEdit" name="wireReceivedEdit">
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label for="comments">Comments</label>
+              <textarea id="comments" name="comments" rows="3"></textarea>
+            </div>
+            <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
+              <button type="submit" class="action-save">Save Appointment</button>
+              <button type="button" id="delete-appointment" class="outline action-delete">Delete Appointment</button>
+            </div>
+          </form>
+        </aside>
+
+        <div id="patient-info-overlay" class="editor-overlay hidden"></div>
+        <aside id="patient-info-drawer" class="editor-drawer hidden" aria-hidden="true">
+          <div class="editor-drawer-head">
+            <h2>Patient Info</h2>
+            <button type="button" id="close-patient-info" class="outline">Close</button>
+          </div>
+          <div class="stack">
+            <p><strong>Name:</strong> <span id="patient-info-name">-</span></p>
+            <p><strong>Condition:</strong> <span id="patient-info-condition">-</span></p>
+            <p><strong>Phone:</strong> <span id="patient-info-phone">-</span></p>
+            <p><strong>Email:</strong> <span id="patient-info-email">-</span></p>
+            <a href="/patients.html" id="open-patient-page" class="patient-registry-link">
+              &#9998; Edit in Patient Registry
+            </a>
+          </div>
+        </aside>
+      </section>
+
+      <p id="message" class="message"></p>
+    </main>
+
+    <script src="/common.js"></script>
+    <script src="/appointments.js"></script>
+  </body>
+</html>
