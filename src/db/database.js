@@ -81,6 +81,12 @@ function initializeDatabase() {
       }
     });
 
+    db.run(`ALTER TABLE clients ADD COLUMN address TEXT`, (err) => {
+      if (err && !err.message.includes('duplicate column')) {
+        console.error('Migration error:', err.message);
+      }
+    });
+
     db.run(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,

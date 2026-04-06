@@ -52,6 +52,7 @@ function clearForm() {
   clientSelect.value = '';
   document.getElementById('durationMinutes').value = '60';
   feeInput.value = (defaultFeeCents / 100).toFixed(2);
+  document.getElementById('wireReceivedEdit').disabled = false;
   deleteAppointmentBtn.disabled = true;
   deleteAppointmentBtn.classList.add('hidden');
   if (isAdmin && therapistSelect) therapistSelect.value = '';
@@ -192,6 +193,10 @@ function openPatientInfo(clientId) {
   patientInfoCondition.textContent = client.condition_notes || '-';
   patientInfoPhone.textContent = client.phone || '-';
   patientInfoEmail.textContent = client.email || '-';
+  const addrEl = document.getElementById('patient-info-address');
+  if (addrEl) {
+    addrEl.innerHTML = client.address ? `${client.address} ${AppCommon.mapsLink(client.address)}` : '-';
+  }
 
   patientInfoOverlay.classList.remove('hidden');
   patientInfoDrawer.classList.remove('hidden');
@@ -254,7 +259,7 @@ function renderAppointmentsTable(rows) {
           <button type="button" class="outline tiny-btn patient-info-btn" data-client-id="${appointment.client_id}">Info</button>
         </div>
       </td>
-      <td>${appointment.location}</td>
+      <td>${appointment.location} ${AppCommon.mapsLink(appointment.location)}</td>
       <td>${appointment.duration_minutes}m</td>
       <td>${AppCommon.euroFromCents(appointment.fee_cents)}</td>
       <td><span class="${appointment.wire_received ? 'status-paid' : 'status-owed'}">${appointment.wire_received ? 'PAID' : 'OWED'}</span></td>
@@ -297,7 +302,7 @@ function renderAppointmentsTable(rows) {
     const actionWrap = document.createElement('div');
     actionWrap.style.cssText = 'display:flex;gap:4px;align-items:center';
 
-    if (!appointment.wire_received) {
+    if (!appointment.wire_received && new Date(appointment.appointment_date) <= new Date()) {
       const payBtn = document.createElement('button');
       payBtn.type = 'button';
       payBtn.className = 'outline tiny-btn';
@@ -385,6 +390,10 @@ async function loadAppointmentById(id) {
   document.getElementById('durationMinutes').value = String(appointment.duration_minutes || 60);
   document.getElementById('feeAmount').value = (Number(appointment.fee_cents || 0) / 100).toFixed(2);
   document.getElementById('wireReceivedEdit').value = appointment.wire_received ? 'true' : 'false';
+  const isFutureAppt = new Date(appointment.appointment_date) > new Date();
+  const wireSelect = document.getElementById('wireReceivedEdit');
+  if (isFutureAppt) { wireSelect.value = 'false'; wireSelect.disabled = true; }
+  else { wireSelect.disabled = false; }
   document.getElementById('paymentType').value = appointment.payment_type || '';
   document.getElementById('comments').value = appointment.comments || appointment.notes || '';
   if (isAdmin && therapistSelect) {
@@ -505,6 +514,14 @@ editorOverlay.addEventListener('click', () => {
   closeEditor();
 });
 
+clientSelect.addEventListener('change', () => {
+  const addressInput = document.getElementById('address');
+  if (!addressInput.value) {
+    const client = clientsById.get(Number(clientSelect.value));
+    if (client && client.address) addressInput.value = client.address;
+  }
+});
+
 closePatientInfoBtn.addEventListener('click', () => {
   closePatientInfo();
 });
@@ -574,6 +591,8 @@ async function initPage() {
   if (newForId) {
     clearForm();
     document.getElementById('clientId').value = newForId;
+    const client = clientsById.get(Number(newForId));
+    if (client && client.address) document.getElementById('address').value = client.address;
     openEditor('New Appointment');
     AppCommon.setMessage('Ready for a new appointment.');
   }

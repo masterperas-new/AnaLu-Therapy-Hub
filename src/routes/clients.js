@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
   const params = search ? [`%${search}%`, `%${search}%`] : [];
 
   db.all(
-    `SELECT id, full_name, condition_notes, phone, email, created_at
+    `SELECT id, full_name, condition_notes, phone, email, address, created_at
      FROM clients
      ${whereSql}
      ORDER BY full_name ASC`,
@@ -67,16 +67,16 @@ router.get('/:id/appointments', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { fullName, conditionNotes, phone, email } = req.body;
+  const { fullName, conditionNotes, phone, email, address } = req.body;
 
   if (!fullName || !fullName.trim() || !conditionNotes || !conditionNotes.trim()) {
     return res.status(400).json({ error: 'Client name and condition are required.' });
   }
 
-  const sql = 'INSERT INTO clients (full_name, condition_notes, phone, email) VALUES (?, ?, ?, ?)';
+  const sql = 'INSERT INTO clients (full_name, condition_notes, phone, email, address) VALUES (?, ?, ?, ?, ?)';
   db.run(
     sql,
-    [fullName.trim(), conditionNotes.trim(), phone || null, email || null],
+    [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null],
     function insertCallback(err) {
       if (err) {
         return res.status(500).json({ error: 'Failed to create client.' });
@@ -95,7 +95,7 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   const clientId = Number(req.params.id);
-  const { fullName, conditionNotes, phone, email } = req.body;
+  const { fullName, conditionNotes, phone, email, address } = req.body;
 
   if (!Number.isInteger(clientId) || clientId <= 0) {
     return res.status(400).json({ error: 'Invalid client id.' });
@@ -106,8 +106,8 @@ router.put('/:id', (req, res) => {
   }
 
   db.run(
-    'UPDATE clients SET full_name = ?, condition_notes = ?, phone = ?, email = ? WHERE id = ?',
-    [fullName.trim(), conditionNotes.trim(), phone || null, email || null, clientId],
+    'UPDATE clients SET full_name = ?, condition_notes = ?, phone = ?, email = ?, address = ? WHERE id = ?',
+    [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, clientId],
     function updateCallback(err) {
       if (err) {
         return res.status(500).json({ error: 'Failed to update client.' });
