@@ -134,7 +134,7 @@ function setSection(sectionName) {
 }
 
 async function loadClients() {
-  state.clients = await api('/api/clients');
+  state.clients = await api('/ALTApi/clients');
 
   clientsList.innerHTML = '';
   clientSelect.innerHTML = '';
@@ -194,7 +194,7 @@ function renderAppointmentsList() {
       button.textContent = 'Mark Wire Received';
       button.addEventListener('click', async () => {
         try {
-          await api(`/api/appointments/${appointment.id}/wire-received`, { method: 'PATCH' });
+          await api(`/ALTApi/appointments/${appointment.id}/wire-received`, { method: 'PATCH' });
           setMessage('Appointment payment updated.');
           await refreshData();
         } catch (error) {
@@ -323,14 +323,14 @@ async function loadAppointmentsByCalendar() {
     end: end.toISOString(),
   });
 
-  state.appointments = await api(`/api/appointments?${query.toString()}`);
+  state.appointments = await api(`/ALTApi/appointments?${query.toString()}`);
 }
 
 async function loadReport() {
   const month = reportMonthInput.value || getDefaultMonth();
   reportMonthInput.value = month;
 
-  const report = await api(`/api/reports/monthly?month=${encodeURIComponent(month)}`);
+  const report = await api(`/ALTApi/reports/monthly?month=${encodeURIComponent(month)}`);
   reportSummary.innerHTML = `
     <div class="kpi"><span>Total Appointments</span><strong>${report.totalAppointments}</strong></div>
     <div class="kpi"><span>Paid Appointments</span><strong>${report.paidAppointments}</strong></div>
@@ -353,7 +353,7 @@ loginForm.addEventListener('submit', async (event) => {
   const formData = new FormData(loginForm);
 
   try {
-    await api('/api/auth/login', {
+    await api('/ALTApi/auth/login', {
       method: 'POST',
       body: JSON.stringify({ password: formData.get('password') }),
     });
@@ -370,7 +370,7 @@ loginForm.addEventListener('submit', async (event) => {
 
 logoutButton.addEventListener('click', async () => {
   try {
-    await api('/api/auth/logout', { method: 'POST' });
+    await api('/ALTApi/auth/logout', { method: 'POST' });
     setAuthenticated(false);
     setMessage('Logged out.');
   } catch (error) {
@@ -409,7 +409,7 @@ clientForm.addEventListener('submit', async (event) => {
   const formData = new FormData(clientForm);
 
   try {
-    await api('/api/clients', {
+    await api('/ALTApi/clients', {
       method: 'POST',
       body: JSON.stringify({
         fullName: formData.get('fullName'),
@@ -431,7 +431,7 @@ appointmentForm.addEventListener('submit', async (event) => {
   const formData = new FormData(appointmentForm);
 
   try {
-    await api('/api/appointments', {
+    await api('/ALTApi/appointments', {
       method: 'POST',
       body: JSON.stringify({
         clientId: Number(formData.get('clientId')),
@@ -467,7 +467,7 @@ async function bootstrap() {
   calendarViewSelect.value = 'week';
 
   try {
-    const sessionData = await api('/api/auth/session');
+    const sessionData = await api('/ALTApi/auth/session');
     setAuthenticated(sessionData.authenticated);
 
     if (sessionData.authenticated) {

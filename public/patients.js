@@ -74,7 +74,7 @@ function updatePager() {
 
 /* ---- patient table ---- */
 async function loadClients(query = '') {
-  const url = query ? `/api/clients?q=${encodeURIComponent(query)}` : '/api/clients';
+  const url = query ? `/ALTApi/clients?q=${encodeURIComponent(query)}` : '/ALTApi/clients';
   allClients = await AppCommon.api(url);
   currentPage = 1;
   renderPatientsTable();
@@ -83,7 +83,7 @@ async function loadClients(query = '') {
 }
 
 async function getOwedCents(clientId) {
-  const rows = await AppCommon.api(`/api/clients/${clientId}/appointments`);
+  const rows = await AppCommon.api(`/ALTApi/clients/${clientId}/appointments`);
   return rows
     .filter((r) => !r.wire_received)
     .reduce((sum, r) => sum + Number(r.fee_cents || 0), 0);
@@ -196,10 +196,10 @@ clientForm.addEventListener('submit', async (event) => {
 
   try {
     if (id) {
-      await AppCommon.api(`/api/clients/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      await AppCommon.api(`/ALTApi/clients/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
       AppCommon.setMessage('Patient updated.');
     } else {
-      await AppCommon.api('/api/clients', { method: 'POST', body: JSON.stringify(payload) });
+      await AppCommon.api('/ALTApi/clients', { method: 'POST', body: JSON.stringify(payload) });
       AppCommon.setMessage('Patient created.');
     }
     clearPatientForm();
@@ -212,7 +212,7 @@ clientForm.addEventListener('submit', async (event) => {
 
 /* ---- comments (inside editor drawer) ---- */
 async function loadComments(clientId) {
-  allComments = await AppCommon.api(`/api/clients/${clientId}/comments`);
+  allComments = await AppCommon.api(`/ALTApi/clients/${clientId}/comments`);
   commentsSearch.value = '';
   commentFormWrap.classList.add('hidden');
   renderCommentsTable();
@@ -265,7 +265,7 @@ function renderCommentsTable(filter) {
     delBtn.addEventListener('click', async () => {
       if (!window.confirm('Delete this comment?')) return;
       try {
-        await AppCommon.api(`/api/clients/${clientId}/comments/${row.id}`, { method: 'DELETE' });
+        await AppCommon.api(`/ALTApi/clients/${clientId}/comments/${row.id}`, { method: 'DELETE' });
         AppCommon.setMessage('Comment deleted.');
         await loadComments(clientId);
       } catch (err) {
@@ -308,12 +308,12 @@ commentForm.addEventListener('submit', async (event) => {
 
   try {
     if (cId) {
-      await AppCommon.api(`/api/clients/${clientId}/comments/${cId}`, {
+      await AppCommon.api(`/ALTApi/clients/${clientId}/comments/${cId}`, {
         method: 'PUT', body: JSON.stringify(payload),
       });
       AppCommon.setMessage('Comment updated.');
     } else {
-      await AppCommon.api(`/api/clients/${clientId}/comments`, {
+      await AppCommon.api(`/ALTApi/clients/${clientId}/comments`, {
         method: 'POST', body: JSON.stringify(payload),
       });
       AppCommon.setMessage('Comment added.');
@@ -340,7 +340,7 @@ closeHistoryBtn.addEventListener('click', () => closeDrawer(historyOverlay, hist
 historyOverlay.addEventListener('click', () => closeDrawer(historyOverlay, historyDrawer));
 
 async function loadHistory(clientId) {
-  allHistoryRows = await AppCommon.api(`/api/clients/${clientId}/appointments`);
+  allHistoryRows = await AppCommon.api(`/ALTApi/clients/${clientId}/appointments`);
   renderHistoryInfo();
   renderHistoryTable();
 }
@@ -421,7 +421,7 @@ function renderHistoryTable(filter) {
         });
         if (!ok) return;
         try {
-          await AppCommon.api(`/api/appointments/${row.id}/payment-received`, { method: 'PATCH' });
+          await AppCommon.api(`/ALTApi/appointments/${row.id}/payment-received`, { method: 'PATCH' });
           AppCommon.setMessage('Payment marked as received.');
           await loadHistory(currentHistoryClientId);
         } catch (err) {

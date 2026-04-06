@@ -85,7 +85,7 @@ function parseFeeAmount(value) {
 }
 
 async function loadClients() {
-  const clients = await AppCommon.api('/api/clients');
+  const clients = await AppCommon.api('/ALTApi/clients');
   clientSelect.innerHTML = '';
 
   const placeholder = document.createElement('option');
@@ -104,7 +104,7 @@ async function loadClients() {
 }
 
 async function loadSettings() {
-  const settings = await AppCommon.api('/api/settings');
+  const settings = await AppCommon.api('/ALTApi/settings');
   feeInput.placeholder = (settings.defaultFeeCents / 100).toFixed(2);
 }
 
@@ -114,7 +114,7 @@ async function loadAppointments() {
     start: start.toISOString(),
     end: end.toISOString(),
   });
-  state.appointments = await AppCommon.api(`/api/appointments?${params.toString()}`);
+  state.appointments = await AppCommon.api(`/ALTApi/appointments?${params.toString()}`);
   renderCalendar();
 }
 
@@ -247,7 +247,7 @@ appointmentForm.addEventListener('submit', async (event) => {
       payload.feeAmount = feeAmount;
     }
 
-    await AppCommon.api('/api/appointments', {
+    await AppCommon.api('/ALTApi/appointments', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

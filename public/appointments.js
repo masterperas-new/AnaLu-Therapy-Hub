@@ -80,7 +80,7 @@ function closeEditor() {
 }
 
 async function loadClients() {
-  const clients = await AppCommon.api('/api/clients');
+  const clients = await AppCommon.api('/ALTApi/clients');
   clientsById = new Map(clients.map((client) => [client.id, client]));
 
   clientSelect.innerHTML = '';
@@ -103,13 +103,13 @@ async function loadClients() {
 }
 
 async function loadSettings() {
-  const settings = await AppCommon.api('/api/settings');
+  const settings = await AppCommon.api('/ALTApi/settings');
   defaultFeeCents = settings.defaultFeeCents;
   feeInput.value = (defaultFeeCents / 100).toFixed(2);
 }
 
 async function loadTherapists() {
-  therapists = await AppCommon.api('/api/users/therapists');
+  therapists = await AppCommon.api('/ALTApi/users/therapists');
 
   /* Populate filter dropdown */
   filterTherapistSelect.innerHTML = '<option value="">All therapists</option>';
@@ -318,7 +318,7 @@ function renderAppointmentsTable(rows) {
         });
         if (!ok) return;
         try {
-          await AppCommon.api(`/api/appointments/${appointment.id}/payment-received`, { method: 'PATCH', body: JSON.stringify({}) });
+          await AppCommon.api(`/ALTApi/appointments/${appointment.id}/payment-received`, { method: 'PATCH', body: JSON.stringify({}) });
           AppCommon.setMessage('Payment marked as received.');
           await loadAppointments();
         } catch (err) {
@@ -373,7 +373,7 @@ function updateFilterSummary() {
 
 async function loadAppointments() {
   const params = buildFilters();
-  currentRows = await AppCommon.api(`/api/appointments?${params.toString()}`);
+  currentRows = await AppCommon.api(`/ALTApi/appointments?${params.toString()}`);
   currentPage = 1;
   currentRows.sort(compareRows);
   renderAppointmentsTable(currentRows);
@@ -382,7 +382,7 @@ async function loadAppointments() {
 }
 
 async function loadAppointmentById(id) {
-  const appointment = await AppCommon.api(`/api/appointments/${id}`);
+  const appointment = await AppCommon.api(`/ALTApi/appointments/${id}`);
   document.getElementById('appointmentId').value = String(appointment.id);
   document.getElementById('clientId').value = String(appointment.client_id);
   document.getElementById('appointmentDate').value = dateToInputValue(appointment.appointment_date);
@@ -443,13 +443,13 @@ appointmentForm.addEventListener('submit', async (event) => {
 
   try {
     if (id) {
-      await AppCommon.api(`/api/appointments/${id}`, {
+      await AppCommon.api(`/ALTApi/appointments/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       });
       AppCommon.setMessage('Appointment updated.');
     } else {
-      await AppCommon.api('/api/appointments', {
+      await AppCommon.api('/ALTApi/appointments', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -483,7 +483,7 @@ deleteAppointmentBtn.addEventListener('click', async () => {
   }
 
   try {
-    await AppCommon.api(`/api/appointments/${id}`, { method: 'DELETE' });
+    await AppCommon.api(`/ALTApi/appointments/${id}`, { method: 'DELETE' });
     await loadAppointments();
     clearForm();
     closeEditor();

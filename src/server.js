@@ -48,16 +48,16 @@ function requireAdmin(req, res, next) {
   return res.status(403).json({ error: 'Admin access required.' });
 }
 
-app.get('/api/health', (_req, res) => {
+app.get('/ALTApi/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.use('/api/auth', authRouter);
-app.use('/api/clients', requireAuth, clientsRouter);
-app.use('/api/appointments', requireAuth, appointmentsRouter);
-app.use('/api/reports', requireAuth, reportsRouter);
-app.use('/api/settings', requireAuth, settingsRouter);
-app.use('/api/users', requireAuth, usersRouter);
+app.use('/ALTApi/auth', authRouter);
+app.use('/ALTApi/clients', requireAuth, clientsRouter);
+app.use('/ALTApi/appointments', requireAuth, appointmentsRouter);
+app.use('/ALTApi/reports', requireAuth, reportsRouter);
+app.use('/ALTApi/settings', requireAuth, settingsRouter);
+app.use('/ALTApi/users', requireAuth, usersRouter);
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

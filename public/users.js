@@ -89,7 +89,7 @@
   /* ---- load & render ---- */
   async function loadUsers() {
     try {
-      allUsers = await api('/api/users');
+      allUsers = await api('/ALTApi/users');
     } catch (err) {
       setMessage(err.message, true);
       allUsers = [];
@@ -177,7 +177,7 @@
 
     const fd = new FormData(addForm);
     try {
-      await api('/api/users', {
+      await api('/ALTApi/users', {
         method: 'POST',
         body: JSON.stringify({
           fullName: fd.get('fullName'),
@@ -204,7 +204,7 @@
     const userId = Number(editUserId.value);
     const fd = new FormData(editForm);
     try {
-      await api(`/api/users/${userId}`, {
+      await api(`/ALTApi/users/${userId}`, {
         method: 'PUT',
         body: JSON.stringify({
           fullName: fd.get('fullName'),
@@ -230,7 +230,7 @@
     if (!confirm(`${willBlock ? 'Block' : 'Unblock'} user "${user.full_name}"?`)) return;
 
     try {
-      await api(`/api/users/${userId}/block`, {
+      await api(`/ALTApi/users/${userId}/block`, {
         method: 'PATCH',
         body: JSON.stringify({ blocked: willBlock }),
       });

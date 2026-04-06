@@ -138,7 +138,7 @@ function renderOwedTable(filter) {
       });
       if (!ok) return;
       try {
-        await AppCommon.api(`/api/appointments/${a.id}/payment-received`, {
+        await AppCommon.api(`/ALTApi/appointments/${a.id}/payment-received`, {
           method: 'PATCH',
           body: JSON.stringify({}),
         });
@@ -274,13 +274,13 @@ futurePagerNext.addEventListener('click', () => {
 });
 
 async function loadTotal() {
-  const report = await AppCommon.api(`/api/reports/total${userIdSeparator()}`);
+  const report = await AppCommon.api(`/ALTApi/reports/total${userIdSeparator()}`);
   renderKpis(totalKpis, report);
 }
 
 async function loadOwed() {
   const today = new Date().toISOString().slice(0, 10);
-  allOwed = await AppCommon.api(`/api/appointments?wireReceived=0&to=${today}${userIdParam()}`);
+  allOwed = await AppCommon.api(`/ALTApi/appointments?wireReceived=0&to=${today}${userIdParam()}`);
   owedLabel.textContent = `Outstanding Payments (${allOwed.length})`;
   owedSearch.value = '';
   owedCurrentPage = 1;
@@ -292,8 +292,8 @@ async function loadFuture() {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const from = tomorrow.toISOString().slice(0, 10);
   const [report, appointments] = await Promise.all([
-    AppCommon.api(`/api/reports/future${userIdSeparator()}`),
-    AppCommon.api(`/api/appointments?from=${from}${userIdParam()}`),
+    AppCommon.api(`/ALTApi/reports/future${userIdSeparator()}`),
+    AppCommon.api(`/ALTApi/appointments?from=${from}${userIdParam()}`),
   ]);
   renderFutureKpis(report);
   allFuture = appointments;
@@ -310,7 +310,7 @@ async function loadMonth() {
     return;
   }
 
-  const report = await AppCommon.api(`/api/reports/monthly?month=${encodeURIComponent(month)}${userIdParam()}`);
+  const report = await AppCommon.api(`/ALTApi/reports/monthly?month=${encodeURIComponent(month)}${userIdParam()}`);
   monthLabel.textContent = `Monthly \u2014 ${month}`;
   renderKpis(monthKpis, report);
 }
@@ -338,7 +338,7 @@ AppCommon.ensureAuth(async () => {
   if (isAdmin) {
     therapistFilterWrap.classList.remove('hidden');
     try {
-      const therapists = await AppCommon.api('/api/users/therapists');
+      const therapists = await AppCommon.api('/ALTApi/users/therapists');
       therapists.forEach((t) => {
         const opt = document.createElement('option');
         opt.value = t.id;

@@ -17,7 +17,7 @@
     const user = getUser();
     const fd = new FormData(profileForm);
     try {
-      await api(`/api/users/${user.id}`, {
+      await api(`/ALTApi/users/${user.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           fullName: fd.get('fullName'),
@@ -25,7 +25,7 @@
         }),
       });
       /* Refresh session info to keep nav in sync */
-      const session = await api('/api/auth/session');
+      const session = await api('/ALTApi/auth/session');
       if (session.authenticated && session.user) {
         Object.assign(user, session.user);
       }
@@ -48,7 +48,7 @@
 
     const user = getUser();
     try {
-      await api(`/api/users/${user.id}`, {
+      await api(`/ALTApi/users/${user.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           fullName: document.getElementById('profileName').value,

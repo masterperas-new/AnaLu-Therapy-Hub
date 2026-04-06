@@ -75,7 +75,7 @@
     applyTheme(theme);
     if (currentUser) {
       currentUser.theme = theme;
-      api(`/api/users/${currentUser.id}/theme`, {
+      api(`/ALTApi/users/${currentUser.id}/theme`, {
         method: 'PATCH',
         body: JSON.stringify({ theme }),
       }).catch(() => {});
@@ -97,7 +97,7 @@
       `<button type="button" class="logout-btn">Logout</button>`;
     userStatus.querySelector('.logout-btn').addEventListener('click', async () => {
       try {
-        await api('/api/auth/logout', { method: 'POST' });
+        await api('/ALTApi/auth/logout', { method: 'POST' });
         currentUser = null;
         setAuthenticated(false);
         setMessage('Logged out.');
@@ -147,7 +147,7 @@
         const formData = new FormData(loginForm);
 
         try {
-          const result = await api('/api/auth/login', {
+          const result = await api('/ALTApi/auth/login', {
             method: 'POST',
             body: JSON.stringify({
               username: formData.get('username'),
@@ -174,7 +174,7 @@
     });
 
     try {
-      const session = await api('/api/auth/session');
+      const session = await api('/ALTApi/auth/session');
       if (session.authenticated && session.user) {
         currentUser = session.user;
         setAuthenticated(true);
