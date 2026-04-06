@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AnaLu Therapy Hub - My Profile</title>
+    <title>AnaLu Therapy Hub - About</title>
     <link rel="stylesheet" href="/app-shell.css" />
   </head>
   <body>
@@ -17,7 +17,7 @@
         </svg>
         <div class="app-header-text">
           <h1 class="app-title">AnaLu Therapy Hub</h1>
-          <p class="page-subtitle">My Profile</p>
+          <p class="page-subtitle">About</p>
         </div>
       </header>
 
@@ -45,39 +45,21 @@
       </section>
 
       <section id="app-content" class="hidden stack">
-        <!-- Personal Information -->
-        <section class="card">
-          <h2>Personal Information</h2>
-          <form id="profile-form">
-            <label>Username</label>
-            <input id="profileUsername" type="text" disabled />
-            <label>Role</label>
-            <input id="profileRole" type="text" disabled />
-            <label for="profileName">Full Name</label>
-            <input id="profileName" name="fullName" type="text" required />
-            <label for="profilePhone">Phone</label>
-            <input id="profilePhone" name="phone" type="text" />
-            <button type="submit" class="action-save">Save Profile</button>
-          </form>
+        <section class="card" id="version-card">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+            <h2 style="margin:0">AnaLu Therapy Hub</h2>
+            <span id="version-badge" style="background:var(--accent);color:#fff;padding:2px 10px;border-radius:12px;font-size:0.85rem;font-weight:600"></span>
+          </div>
+          <p id="release-date" style="color:var(--muted);margin-bottom:16px;font-size:0.9rem"></p>
         </section>
 
-        <!-- Change Password -->
-        <section class="card">
-          <h2>Change Password</h2>
-          <form id="password-form">
-            <label for="newPwd">New Password</label>
-            <input id="newPwd" name="password" type="password" required minlength="4" autocomplete="new-password" />
-            <label for="confirmPwd">Confirm Password</label>
-            <input id="confirmPwd" name="confirm" type="password" required minlength="4" autocomplete="new-password" />
-            <button type="submit" class="action-save">Update Password</button>
-          </form>
-        </section>
+        <div id="version-history"></div>
       </section>
 
       <p id="message" class="message"></p>
     </main>
 
     <script src="/common.js"></script>
-    <script src="/profile.js"></script>
+    <script src="/about.js"></script>
   </body>
 </html>

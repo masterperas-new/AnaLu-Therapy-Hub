@@ -20,4 +20,12 @@ settingsForm.addEventListener('submit', async (event) => {
   }
 });
 
-AppCommon.ensureAuth(loadSettings);
+AppCommon.ensureAuth(() => {
+  const user = AppCommon.getUser();
+  if (!user || user.role !== 'admin') {
+    document.getElementById('app-content').innerHTML =
+      '<section class="card"><h2>Access Denied</h2><p>Admin access required.</p></section>';
+    return;
+  }
+  loadSettings();
+});
