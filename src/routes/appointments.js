@@ -34,7 +34,7 @@ function getDefaultFeeCents(callback) {
 }
 
 router.get('/', (req, res) => {
-  const { month, start, end, q, clientId, wireReceived, paymentType, from, to } = req.query;
+  const { month, start, end, q, clientId, wireReceived, paymentType, from, to, userId } = req.query;
   const user = req.session.user;
 
   const filters = [];
@@ -44,6 +44,9 @@ router.get('/', (req, res) => {
   if (user.role !== 'admin') {
     filters.push('a.user_id = ?');
     params.push(user.id);
+  } else if (userId) {
+    filters.push('a.user_id = ?');
+    params.push(Number(userId));
   }
 
   if (month) {
@@ -105,9 +108,11 @@ router.get('/', (req, res) => {
       a.wire_received_date,
       a.payment_type,
       a.user_id,
+      u.full_name AS therapist_name,
       a.created_at
     FROM appointments a
     JOIN clients c ON c.id = a.client_id
+    LEFT JOIN users u ON u.id = a.user_id
     ${whereSql}
     ORDER BY a.appointment_date DESC
   `;
@@ -147,9 +152,11 @@ router.get('/:id', (req, res) => {
       a.wire_received_date,
       a.payment_type,
       a.user_id,
+      u.full_name AS therapist_name,
       a.created_at
     FROM appointments a
     JOIN clients c ON c.id = a.client_id
+    LEFT JOIN users u ON u.id = a.user_id
     WHERE a.id = ? ${userFilter}
   `;
 
@@ -176,7 +183,9 @@ router.post('/', (req, res) => {
     comments,
     wireReceived,
     paymentType,
+    userId,
   } = req.body;
+  const user = req.session.user;
   const safeDuration = durationMinutes === undefined ? 60 : Number(durationMinutes);
   const safePaymentType = paymentType || null;
   const feeProvided = feeAmount !== undefined && feeAmount !== null && feeAmount !== '';
@@ -187,6 +196,20 @@ router.post('/', (req, res) => {
 
   if (Number.isNaN(safeDuration) || safeDuration <= 0) {
     return res.status(400).json({ error: 'Duration must be a positive number of minutes.' });
+  }
+
+  /* Determine which therapist owns this appointment */
+  let assignedUserId;
+  if (user.role === 'admin') {
+    if (!userId) {
+      return res.status(400).json({ error: 'Admin must select a therapist for the appointment.' });
+    }
+    assignedUserId = Number(userId);
+    if (assignedUserId === user.id) {
+      return res.status(400).json({ error: 'Admin cannot be assigned appointments.' });
+    }
+  } else {
+    assignedUserId = user.id;
   }
 
   const sql = `
@@ -214,7 +237,7 @@ router.post('/', (req, res) => {
       sql,
       [
         Number(clientId),
-        req.session.user.id,
+        assignedUserId,
         appointmentDate,
         address.trim(),
         feeCents,
@@ -265,6 +288,7 @@ router.put('/:id', (req, res) => {
     comments,
     wireReceived,
     paymentType,
+    userId,
   } = req.body;
 
   const feeCents = Math.round(Number(feeAmount) * 100);
@@ -290,7 +314,26 @@ router.put('/:id', (req, res) => {
   const paid = wireReceived ? 1 : 0;
   const paidDate = paid ? new Date().toISOString() : null;
 
+  /* Admin can reassign therapist; therapist can only edit own */
   const userFilter = user.role !== 'admin' ? 'AND user_id = ?' : '';
+  const assignedUserId = (user.role === 'admin' && userId) ? Number(userId) : null;
+
+  if (assignedUserId && assignedUserId === user.id) {
+    return res.status(400).json({ error: 'Admin cannot be assigned appointments.' });
+  }
+
+  const setCols = [
+    'client_id = ?',
+    'appointment_date = ?',
+    'location = ?',
+    'fee_cents = ?',
+    'duration_minutes = ?',
+    'notes = ?',
+    'comments = ?',
+    'wire_received = ?',
+    'wire_received_date = ?',
+    'payment_type = ?',
+  ];
   const updateParams = [
     Number(clientId),
     appointmentDate,
@@ -302,26 +345,18 @@ router.put('/:id', (req, res) => {
     paid,
     paidDate,
     safePaymentType,
-    appointmentId,
   ];
+
+  if (assignedUserId) {
+    setCols.push('user_id = ?');
+    updateParams.push(assignedUserId);
+  }
+
+  updateParams.push(appointmentId);
   if (user.role !== 'admin') updateParams.push(user.id);
 
   db.run(
-    `
-      UPDATE appointments
-      SET
-        client_id = ?,
-        appointment_date = ?,
-        location = ?,
-        fee_cents = ?,
-        duration_minutes = ?,
-        notes = ?,
-        comments = ?,
-        wire_received = ?,
-        wire_received_date = ?,
-        payment_type = ?
-      WHERE id = ? ${userFilter}
-    `,
+    `UPDATE appointments SET ${setCols.join(', ')} WHERE id = ? ${userFilter}`,
     updateParams,
     function updateCallback(err) {
       if (err) {

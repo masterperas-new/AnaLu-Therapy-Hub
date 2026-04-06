@@ -4,6 +4,21 @@ const { db } = require('../db/database');
 
 const router = express.Router();
 
+/* List active therapists — any authenticated user (used by appointment form) */
+router.get('/therapists', (req, res) => {
+  db.all(
+    "SELECT id, full_name FROM users WHERE role = 'therapist' AND blocked = 0 ORDER BY full_name ASC",
+    [],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to fetch therapists.' });
+      }
+
+      return res.json(rows);
+    }
+  );
+});
+
 /* List users — admin only */
 router.get('/', (req, res) => {
   if (req.session.user.role !== 'admin') {

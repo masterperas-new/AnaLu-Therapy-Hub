@@ -1,0 +1,43 @@
+{
+  "version": "1.0-beta",
+  "releaseDate": "2026-04-06",
+  "history": [
+    {
+      "version": "1.0-beta",
+      "date": "2026-04-06",
+      "summary": "First tagged release — full multi-user system with role-based access control.",
+      "changes": [
+        "Admin appointment management — admin sees all appointments, filters by therapist, schedules for therapists, edits any appointment and can reassign therapists",
+        "Therapist endpoint — new /api/users/therapists for populating therapist dropdowns across the app",
+        "Revenue Control therapist filter — admin can filter all revenue sections (total, monthly, future, outstanding) by therapist; non-admin users see only their own data",
+        "Report endpoints accept userId parameter — /api/reports/total, /monthly, /yearly and /future all support admin filtering by therapist",
+        "Admin-only navigation — Configuration and User Management links hidden from non-admin users via data-admin-only attribute",
+        "Settings page access control — non-admin users who navigate directly to /settings.html see Access Denied",
+        "Nav hidden before login — main navigation bar and logout button are hidden until authenticated",
+        "Simplified role-based UI — single updateNavForRole() function using data-admin-only for all admin elements"
+      ]
+    },
+    {
+      "version": "0.9-alpha",
+      "date": "2026-04-05",
+      "summary": "Multi-user RBAC with block/unblock, user management, profile page.",
+      "changes": [
+        "Multi-user authentication system with username and password (bcrypt)",
+        "Role-based access control — admin and therapist roles",
+        "User Management page (admin-only) — create, edit, block/unblock users",
+        "My Profile page — self-service profile and password changes",
+        "Case-insensitive login",
+        "Blocked user rejection at login",
+        "All pages updated with username+password login forms",
+        "Shared common.js with AppCommon utility (login, session, nav role management)",
+        "Patient Registry with comments section and appointment history",
+        "Revenue Control with total, monthly, future, and outstanding payments",
+        "Appointment Management with filters, search, and pagination",
+        "Schedule Hub with weekly and monthly calendar views",
+        "Configuration page for default fee settings",
+        "Payment confirmation dialog",
+        "Payment type tracking (Wire, MBWay, Cash, etc.)"
+      ]
+    }
+  ]
+}

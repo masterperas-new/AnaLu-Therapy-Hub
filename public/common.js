@@ -39,17 +39,12 @@
   function setAuthenticated(authenticated) {
     if (loginView) loginView.classList.toggle('hidden', authenticated);
     if (appView) appView.classList.toggle('hidden', !authenticated);
+    const nav = document.querySelector('.main-nav');
+    if (nav) nav.classList.toggle('hidden', !authenticated);
   }
 
   function updateNavForRole() {
     if (!currentUser) return;
-    document.querySelectorAll('.main-nav a').forEach((link) => {
-      /* Hide admin-only links from therapists */
-      if (currentUser.role !== 'admin' && (link.pathname === '/settings.html')) {
-        link.style.display = 'none';
-      }
-    });
-    /* Show user-management link only for admin */
     document.querySelectorAll('[data-admin-only]').forEach((el) => {
       el.style.display = currentUser.role === 'admin' ? '' : 'none';
     });

@@ -11,8 +11,15 @@ router.get('/monthly', (req, res) => {
     return res.status(400).json({ error: 'Month is required in YYYY-MM format.' });
   }
 
-  const userFilter = user.role !== 'admin' ? 'AND user_id = ?' : '';
-  const params = user.role !== 'admin' ? [month, user.id] : [month];
+  let userFilter = '';
+  const params = [month];
+  if (user.role !== 'admin') {
+    userFilter = 'AND user_id = ?';
+    params.push(user.id);
+  } else if (req.query.userId) {
+    userFilter = 'AND user_id = ?';
+    params.push(Number(req.query.userId));
+  }
 
   const sql = `
     SELECT
@@ -51,8 +58,15 @@ router.get('/yearly', (req, res) => {
     return res.status(400).json({ error: 'Year is required in YYYY format.' });
   }
 
-  const userFilter = user.role !== 'admin' ? 'AND user_id = ?' : '';
-  const params = user.role !== 'admin' ? [year, user.id] : [year];
+  let userFilter = '';
+  const params = [year];
+  if (user.role !== 'admin') {
+    userFilter = 'AND user_id = ?';
+    params.push(user.id);
+  } else if (req.query.userId) {
+    userFilter = 'AND user_id = ?';
+    params.push(Number(req.query.userId));
+  }
 
   const sql = `
     SELECT
@@ -85,8 +99,15 @@ router.get('/yearly', (req, res) => {
 
 router.get('/total', (req, res) => {
   const user = req.session.user;
-  const userFilter = user.role !== 'admin' ? 'WHERE user_id = ?' : '';
-  const params = user.role !== 'admin' ? [user.id] : [];
+  let userFilter = '';
+  const params = [];
+  if (user.role !== 'admin') {
+    userFilter = 'WHERE user_id = ?';
+    params.push(user.id);
+  } else if (req.query.userId) {
+    userFilter = 'WHERE user_id = ?';
+    params.push(Number(req.query.userId));
+  }
 
   const sql = `
     SELECT
@@ -118,8 +139,15 @@ router.get('/total', (req, res) => {
 
 router.get('/future', (req, res) => {
   const user = req.session.user;
-  const userFilter = user.role !== 'admin' ? 'AND user_id = ?' : '';
-  const params = user.role !== 'admin' ? [user.id] : [];
+  let userFilter = '';
+  const params = [];
+  if (user.role !== 'admin') {
+    userFilter = 'AND user_id = ?';
+    params.push(user.id);
+  } else if (req.query.userId) {
+    userFilter = 'AND user_id = ?';
+    params.push(Number(req.query.userId));
+  }
 
   const sql = `
     SELECT

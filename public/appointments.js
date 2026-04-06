@@ -20,6 +20,12 @@ const patientInfoCondition = document.getElementById('patient-info-condition');
 const patientInfoPhone = document.getElementById('patient-info-phone');
 const patientInfoEmail = document.getElementById('patient-info-email');
 
+const therapistFilterWrap = document.getElementById('therapist-filter-wrap');
+const filterTherapistSelect = document.getElementById('filterTherapist');
+const therapistFieldWrap = document.getElementById('therapist-field-wrap');
+const therapistSelect = document.getElementById('therapistId');
+const therapistColHead = document.getElementById('therapist-col-head');
+
 const pager = document.getElementById('pager');
 const pagerPrev = document.getElementById('pager-prev');
 const pagerNext = document.getElementById('pager-next');
@@ -31,6 +37,8 @@ let defaultFeeCents = 0;
 let clientsById = new Map();
 let currentRows = [];
 let sortState = { key: 'appointment_date', dir: 'desc' };
+let isAdmin = false;
+let therapists = [];
 
 function dateToInputValue(isoString) {
   const d = new Date(isoString);
@@ -46,6 +54,7 @@ function clearForm() {
   feeInput.value = (defaultFeeCents / 100).toFixed(2);
   deleteAppointmentBtn.disabled = true;
   deleteAppointmentBtn.classList.add('hidden');
+  if (isAdmin && therapistSelect) therapistSelect.value = '';
 }
 
 function openEditor(title = 'Edit Appointment') {
@@ -98,6 +107,34 @@ async function loadSettings() {
   feeInput.value = (defaultFeeCents / 100).toFixed(2);
 }
 
+async function loadTherapists() {
+  therapists = await AppCommon.api('/api/users/therapists');
+
+  /* Populate filter dropdown */
+  filterTherapistSelect.innerHTML = '<option value="">All therapists</option>';
+  therapists.forEach((t) => {
+    const opt = document.createElement('option');
+    opt.value = String(t.id);
+    opt.textContent = t.full_name;
+    filterTherapistSelect.appendChild(opt);
+  });
+
+  /* Populate form dropdown */
+  therapistSelect.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select a therapist';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  therapistSelect.appendChild(placeholder);
+  therapists.forEach((t) => {
+    const opt = document.createElement('option');
+    opt.value = String(t.id);
+    opt.textContent = t.full_name;
+    therapistSelect.appendChild(opt);
+  });
+}
+
 function buildFilters() {
   const data = new FormData(filterForm);
   const params = new URLSearchParams();
@@ -106,6 +143,11 @@ function buildFilters() {
     const value = data.get(key);
     if (value) params.set(key, value);
   });
+
+  if (isAdmin) {
+    const therapistId = data.get('userId');
+    if (therapistId) params.set('userId', therapistId);
+  }
 
   const from = data.get('from');
   const to = data.get('to');
@@ -186,8 +228,9 @@ function renderAppointmentsTable(rows) {
   appointmentsTableBody.innerHTML = '';
 
   if (!rows.length) {
+    const colCount = isAdmin ? 9 : 8;
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="8" class="small">No appointments found.</td>';
+    tr.innerHTML = `<td colspan="${colCount}" class="small">No appointments found.</td>`;
     appointmentsTableBody.appendChild(tr);
     pager.classList.add('hidden');
     return;
@@ -216,6 +259,7 @@ function renderAppointmentsTable(rows) {
       <td>${AppCommon.euroFromCents(appointment.fee_cents)}</td>
       <td><span class="${appointment.wire_received ? 'status-paid' : 'status-owed'}">${appointment.wire_received ? 'PAID' : 'OWED'}</span></td>
       <td>${appointment.payment_type || '-'}</td>
+      ${isAdmin ? `<td>${appointment.therapist_name || '-'}</td>` : ''}
     `;
 
     const openForEdit = async () => {
@@ -304,6 +348,14 @@ function updateFilterSummary() {
   const pt = document.getElementById('filterPaymentType').value;
   if (pt) parts.push(pt);
 
+  if (isAdmin) {
+    const tId = filterTherapistSelect.value;
+    if (tId) {
+      const opt = filterTherapistSelect.options[filterTherapistSelect.selectedIndex];
+      parts.push(opt.textContent);
+    }
+  }
+
   const from = document.getElementById('from').value;
   const to = document.getElementById('to').value;
   if (from && to) parts.push(`${from} to ${to}`);
@@ -335,6 +387,9 @@ async function loadAppointmentById(id) {
   document.getElementById('wireReceivedEdit').value = appointment.wire_received ? 'true' : 'false';
   document.getElementById('paymentType').value = appointment.payment_type || '';
   document.getElementById('comments').value = appointment.comments || appointment.notes || '';
+  if (isAdmin && therapistSelect) {
+    therapistSelect.value = appointment.user_id ? String(appointment.user_id) : '';
+  }
   deleteAppointmentBtn.disabled = false;
   deleteAppointmentBtn.classList.remove('hidden');
 }
@@ -367,6 +422,15 @@ appointmentForm.addEventListener('submit', async (event) => {
     wireReceived: document.getElementById('wireReceivedEdit').value === 'true',
     paymentType: document.getElementById('paymentType').value || null,
   };
+
+  if (isAdmin) {
+    const selTherapist = therapistSelect.value;
+    if (!selTherapist) {
+      AppCommon.setMessage('Please select a therapist.', true);
+      return;
+    }
+    payload.userId = Number(selTherapist);
+  }
 
   try {
     if (id) {
@@ -424,6 +488,7 @@ clearFiltersBtn.addEventListener('click', async () => {
   filterForm.reset();
   filterClientSelect.value = '';
   document.getElementById('filterPaymentType').value = '';
+  if (isAdmin) filterTherapistSelect.value = '';
   try {
     await loadAppointments();
     AppCommon.setMessage('Filters cleared.');
@@ -481,7 +546,19 @@ sortButtons.forEach((button) => {
 });
 
 async function initPage() {
-  await Promise.all([loadClients(), loadSettings()]);
+  const user = AppCommon.getUser();
+  isAdmin = user && user.role === 'admin';
+
+  /* Show admin-only UI elements */
+  if (isAdmin) {
+    therapistFilterWrap.classList.remove('hidden');
+    therapistFieldWrap.classList.remove('hidden');
+    therapistColHead.classList.remove('hidden');
+  }
+
+  const initPromises = [loadClients(), loadSettings()];
+  if (isAdmin) initPromises.push(loadTherapists());
+  await Promise.all(initPromises);
   clearForm();
   await loadAppointments();
 

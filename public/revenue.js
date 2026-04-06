@@ -26,6 +26,22 @@ let owedCurrentPage = 1;
 let allOwed = [];
 let futureCurrentPage = 1;
 let allFuture = [];
+let isAdmin = false;
+
+const therapistFilterWrap = document.getElementById('therapist-filter-wrap');
+const therapistFilter = document.getElementById('therapistFilter');
+
+function userIdParam() {
+  if (!isAdmin) return '';
+  const val = therapistFilter.value;
+  return val ? `&userId=${val}` : '';
+}
+
+function userIdSeparator() {
+  if (!isAdmin) return '';
+  const val = therapistFilter.value;
+  return val ? `?userId=${val}` : '';
+}
 
 function renderKpis(target, report) {
   target.innerHTML = `
@@ -258,13 +274,13 @@ futurePagerNext.addEventListener('click', () => {
 });
 
 async function loadTotal() {
-  const report = await AppCommon.api('/api/reports/total');
+  const report = await AppCommon.api(`/api/reports/total${userIdSeparator()}`);
   renderKpis(totalKpis, report);
 }
 
 async function loadOwed() {
   const today = new Date().toISOString().slice(0, 10);
-  allOwed = await AppCommon.api(`/api/appointments?wireReceived=0&to=${today}`);
+  allOwed = await AppCommon.api(`/api/appointments?wireReceived=0&to=${today}${userIdParam()}`);
   owedLabel.textContent = `Outstanding Payments (${allOwed.length})`;
   owedSearch.value = '';
   owedCurrentPage = 1;
@@ -276,8 +292,8 @@ async function loadFuture() {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const from = tomorrow.toISOString().slice(0, 10);
   const [report, appointments] = await Promise.all([
-    AppCommon.api('/api/reports/future'),
-    AppCommon.api(`/api/appointments?from=${from}`),
+    AppCommon.api(`/api/reports/future${userIdSeparator()}`),
+    AppCommon.api(`/api/appointments?from=${from}${userIdParam()}`),
   ]);
   renderFutureKpis(report);
   allFuture = appointments;
@@ -294,7 +310,7 @@ async function loadMonth() {
     return;
   }
 
-  const report = await AppCommon.api(`/api/reports/monthly?month=${encodeURIComponent(month)}`);
+  const report = await AppCommon.api(`/api/reports/monthly?month=${encodeURIComponent(month)}${userIdParam()}`);
   monthLabel.textContent = `Monthly \u2014 ${month}`;
   renderKpis(monthKpis, report);
 }
@@ -308,8 +324,37 @@ document.getElementById('loadMonth').addEventListener('click', async () => {
   }
 });
 
+async function loadAll() {
+  await Promise.all([loadTotal(), loadMonth(), loadOwed(), loadFuture()]);
+}
+
 AppCommon.ensureAuth(async () => {
+  const user = AppCommon.getUser();
+  isAdmin = user && user.role === 'admin';
+
   const now = new Date();
   monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  await Promise.all([loadTotal(), loadMonth(), loadOwed(), loadFuture()]);
+
+  if (isAdmin) {
+    therapistFilterWrap.classList.remove('hidden');
+    try {
+      const therapists = await AppCommon.api('/api/users/therapists');
+      therapists.forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.full_name;
+        therapistFilter.appendChild(opt);
+      });
+    } catch (_) { /* ignore */ }
+
+    therapistFilter.addEventListener('change', async () => {
+      try {
+        await loadAll();
+      } catch (err) {
+        AppCommon.setMessage(err.message, true);
+      }
+    });
+  }
+
+  await loadAll();
 });

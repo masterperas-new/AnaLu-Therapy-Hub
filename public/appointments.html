@@ -26,9 +26,10 @@
         <a href="/appointments.html">Appointment Management</a>
         <a href="/patients.html">Patient Registry</a>
         <a href="/revenue.html">Revenue Control</a>
-        <a href="/settings.html">Configuration</a>
+        <a href="/settings.html" data-admin-only>Configuration</a>
         <a href="/users.html" data-admin-only>User Management</a>
         <a href="/profile.html">My Profile</a>
+        <a href="/about.html">About</a>
         <button type="button" class="logout-btn">Logout</button>
       </nav>
 
@@ -83,6 +84,10 @@
                 <input id="to" name="to" type="date" />
               </div>
             </div>
+            <div id="therapist-filter-wrap" class="hidden">
+              <label for="filterTherapist">Therapist</label>
+              <select id="filterTherapist" name="userId"></select>
+            </div>
             <div class="filter-actions">
               <button type="submit">Apply Filters</button>
               <button type="button" id="clear-filters" class="outline">Clear Filters</button>
@@ -106,6 +111,7 @@
                   <th><button type="button" class="sort-btn" data-sort-key="fee_cents">Fee</button></th>
                   <th><button type="button" class="sort-btn" data-sort-key="wire_received">Status</button></th>
                   <th><button type="button" class="sort-btn" data-sort-key="payment_type">Type</button></th>
+                  <th id="therapist-col-head" class="hidden"><button type="button" class="sort-btn" data-sort-key="therapist_name">Therapist</button></th>
                   <th></th>
                 </tr>
               </thead>
@@ -156,6 +162,10 @@
                 <option value="Card">Card</option>
                 <option value="Transfer">Transfer</option>
               </select>
+            </div>
+            <div id="therapist-field-wrap" class="hidden">
+              <label for="therapistId">Therapist</label>
+              <select id="therapistId" name="therapistId" required></select>
             </div>
             <div>
               <label for="wireReceivedEdit">Payment Received</label>
