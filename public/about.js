@@ -7,6 +7,32 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+function buildVersionCard(release, isCurrent) {
+  const section = document.createElement('section');
+  section.className = 'card';
+
+  const heading = document.createElement('h3');
+  heading.style.marginBottom = '4px';
+  heading.innerHTML = `v${release.version}` +
+    (isCurrent ? ' <span style="color:var(--accent);font-size:0.8rem">(current)</span>' : '');
+  section.appendChild(heading);
+
+  const dateLine = document.createElement('p');
+  dateLine.style.cssText = 'color:var(--muted);font-size:0.85rem;margin-bottom:8px';
+  dateLine.textContent = `${formatDate(release.date)} — ${release.summary}`;
+  section.appendChild(dateLine);
+
+  const ul = document.createElement('ul');
+  ul.style.cssText = 'margin:0;padding-left:20px;line-height:1.6';
+  release.changes.forEach((change) => {
+    const li = document.createElement('li');
+    li.textContent = change;
+    ul.appendChild(li);
+  });
+  section.appendChild(ul);
+  return section;
+}
+
 async function loadVersion() {
   const data = await AppCommon.api('/version.json');
 
@@ -15,32 +41,33 @@ async function loadVersion() {
 
   versionHistory.innerHTML = '';
 
-  data.history.forEach((release, idx) => {
-    const section = document.createElement('section');
-    section.className = 'card';
+  if (data.history.length > 0) {
+    versionHistory.appendChild(buildVersionCard(data.history[0], true));
+  }
 
-    const heading = document.createElement('h3');
-    heading.style.marginBottom = '4px';
-    heading.innerHTML = `v${release.version}` +
-      (idx === 0 ? ' <span style="color:var(--accent);font-size:0.8rem">(current)</span>' : '');
-    section.appendChild(heading);
+  if (data.history.length > 1) {
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.textContent = 'Show version history';
+    toggle.style.cssText = 'margin-top:8px;padding:8px 16px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;cursor:pointer;font:inherit;font-size:0.85rem';
 
-    const dateLine = document.createElement('p');
-    dateLine.style.cssText = 'color:var(--muted);font-size:0.85rem;margin-bottom:8px';
-    dateLine.textContent = `${formatDate(release.date)} — ${release.summary}`;
-    section.appendChild(dateLine);
+    const olderContainer = document.createElement('div');
+    olderContainer.style.display = 'none';
+    olderContainer.className = 'stack';
 
-    const ul = document.createElement('ul');
-    ul.style.cssText = 'margin:0;padding-left:20px;line-height:1.6';
-    release.changes.forEach((change) => {
-      const li = document.createElement('li');
-      li.textContent = change;
-      ul.appendChild(li);
+    data.history.slice(1).forEach((release) => {
+      olderContainer.appendChild(buildVersionCard(release, false));
     });
-    section.appendChild(ul);
 
-    versionHistory.appendChild(section);
-  });
+    toggle.addEventListener('click', () => {
+      const visible = olderContainer.style.display !== 'none';
+      olderContainer.style.display = visible ? 'none' : '';
+      toggle.textContent = visible ? 'Show version history' : 'Hide version history';
+    });
+
+    versionHistory.appendChild(toggle);
+    versionHistory.appendChild(olderContainer);
+  }
 }
 
 AppCommon.ensureAuth(loadVersion);

@@ -14,6 +14,7 @@ router.get('/session', (req, res) => {
         role: req.session.user.role,
         fullName: req.session.user.fullName,
         phone: req.session.user.phone,
+        theme: req.session.user.theme || null,
       },
     });
   }
@@ -28,7 +29,7 @@ router.post('/login', (req, res) => {
   }
 
   db.get(
-    'SELECT id, username, password_hash, role, full_name, phone, blocked FROM users WHERE LOWER(username) = LOWER(?)',
+    'SELECT id, username, password_hash, role, full_name, phone, blocked, theme FROM users WHERE LOWER(username) = LOWER(?)',
     [username],
     (err, user) => {
       if (err) {
@@ -50,6 +51,7 @@ router.post('/login', (req, res) => {
         role: user.role,
         fullName: user.full_name,
         phone: user.phone,
+        theme: user.theme || null,
       };
 
       return res.json({

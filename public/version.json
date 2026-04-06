@@ -1,7 +1,22 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "releaseDate": "2026-04-06",
   "history": [
+    {
+      "version": "1.2",
+      "date": "2026-04-06",
+      "summary": "Theme system, per-user theme persistence, UI refinements.",
+      "changes": [
+        "4 colour themes — light-green, light-blue, dark-green, dark-blue with full CSS variable system",
+        "Per-user theme persistence — theme saved to database via API, loaded on login",
+        "Theme picker with colour swatches in the user status bar",
+        "Admin badge (red ADMIN pill) displayed next to admin usernames",
+        "Dark mode support with dedicated CSS overrides",
+        "Distinctive logout button — solid red background across all themes",
+        "About link right-aligned in navigation bar",
+        "About page shows only current version with expandable version history toggle"
+      ]
+    },
     {
       "version": "1.1",
       "date": "2026-04-06",

@@ -87,6 +87,12 @@ function initializeDatabase() {
       }
     });
 
+    db.run(`ALTER TABLE users ADD COLUMN theme TEXT`, (err) => {
+      if (err && !err.message.includes('duplicate column')) {
+        console.error('Migration error:', err.message);
+      }
+    });
+
     db.run(`
       CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
