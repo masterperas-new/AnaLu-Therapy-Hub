@@ -131,6 +131,21 @@ router.put('/:id', (req, res) => {
   );
 });
 
+/* Save theme preference */
+router.patch('/:id/theme', (req, res) => {
+  const userId = Number(req.params.id);
+  if (req.session.user.id !== userId) {
+    return res.status(403).json({ error: 'You can only change your own theme.' });
+  }
+
+  const { theme } = req.body;
+  db.run('UPDATE users SET theme = ? WHERE id = ?', [theme || null, userId], function cb(err) {
+    if (err) return res.status(500).json({ error: 'Failed to save theme.' });
+    req.session.user.theme = theme || null;
+    return res.json({ theme: theme || null });
+  });
+});
+
 /* Block / unblock user — admin only, cannot block self */
 router.patch('/:id/block', (req, res) => {
   if (req.session.user.role !== 'admin') {

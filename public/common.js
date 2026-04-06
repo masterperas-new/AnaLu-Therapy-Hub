@@ -52,13 +52,48 @@
 
   let clockInterval = null;
 
+  const THEMES = ['light-green', 'light-blue', 'dark-green', 'dark-blue'];
+  const THEME_LABELS = { 'light-green': 'Light Green', 'light-blue': 'Light Blue', 'dark-green': 'Dark Green', 'dark-blue': 'Dark Blue' };
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.querySelectorAll('.theme-swatch').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.theme === theme);
+    });
+  }
+
+  function loadTheme() {
+    if (currentUser && currentUser.theme && THEMES.includes(currentUser.theme)) {
+      applyTheme(currentUser.theme);
+      return;
+    }
+    const defaultTheme = currentUser && currentUser.role === 'admin' ? 'dark-green' : 'light-green';
+    applyTheme(defaultTheme);
+  }
+
+  function setTheme(theme) {
+    applyTheme(theme);
+    if (currentUser) {
+      currentUser.theme = theme;
+      api(`/api/users/${currentUser.id}/theme`, {
+        method: 'PATCH',
+        body: JSON.stringify({ theme }),
+      }).catch(() => {});
+    }
+  }
+
   function updateUserStatus() {
     const userStatus = document.getElementById('user-status');
     if (!userStatus || !currentUser) return;
+    const isAdmin = currentUser.role === 'admin';
+    const adminBadge = isAdmin ? '<span class="admin-badge">Admin</span>' : '';
     userStatus.innerHTML =
-      `<a href="/profile.html" class="user-name">${currentUser.fullName}</a>` +
+      `<a href="/profile.html" class="user-name">${currentUser.fullName}${adminBadge}</a>` +
       `<div class="user-role">${currentUser.role}</div>` +
       `<div class="user-clock" id="live-clock"></div>` +
+      `<div class="theme-picker">` +
+        THEMES.map((t) => `<button type="button" class="theme-swatch theme-swatch--${t}" data-theme="${t}" title="${THEME_LABELS[t]}"></button>`).join('') +
+      `</div>` +
       `<button type="button" class="logout-btn">Logout</button>`;
     userStatus.querySelector('.logout-btn').addEventListener('click', async () => {
       try {
@@ -70,6 +105,10 @@
         setMessage(error.message, true);
       }
     });
+    userStatus.querySelectorAll('.theme-swatch').forEach((btn) => {
+      btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+    });
+    loadTheme();
     startClock();
   }
 
