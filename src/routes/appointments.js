@@ -229,7 +229,9 @@ router.post('/', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
-  const paid = wireReceived ? 1 : 0;
+  /* Block payment on future appointments */
+  const isFuture = new Date(appointmentDate) > new Date();
+  const paid = (wireReceived && !isFuture) ? 1 : 0;
   const paidDate = paid ? new Date().toISOString() : null;
 
   const insertWithFee = (feeCents) => {
@@ -311,6 +313,11 @@ router.put('/:id', (req, res) => {
     return res.status(400).json({ error: 'Duration must be a positive number of minutes.' });
   }
 
+  /* Block payment on future appointments */
+  const isFuture = new Date(appointmentDate) > new Date();
+  if (wireReceived && isFuture) {
+    return res.status(400).json({ error: 'Future appointments cannot be marked as paid.' });
+  }
   const paid = wireReceived ? 1 : 0;
   const paidDate = paid ? new Date().toISOString() : null;
 
@@ -379,6 +386,16 @@ router.patch('/:id/payment-received', (req, res) => {
   const paymentDate = new Date().toISOString();
   const safePaymentType = body.paymentType || null;
 
+  /* Block payment on future appointments */
+  const userCheckFilter = user.role !== 'admin' ? 'AND user_id = ?' : '';
+  const checkParams = user.role !== 'admin' ? [id, user.id] : [id];
+  db.get(`SELECT appointment_date FROM appointments WHERE id = ? ${userCheckFilter}`, checkParams, (checkErr, row) => {
+    if (checkErr) return res.status(500).json({ error: 'Failed to check appointment.' });
+    if (!row) return res.status(404).json({ error: 'Appointment not found.' });
+    if (new Date(row.appointment_date) > new Date()) {
+      return res.status(400).json({ error: 'Future appointments cannot be marked as paid.' });
+    }
+
   const userFilter = user.role !== 'admin' ? 'AND user_id = ?' : '';
   const params = [paymentDate, safePaymentType, id];
   if (user.role !== 'admin') params.push(user.id);
@@ -398,6 +415,7 @@ router.patch('/:id/payment-received', (req, res) => {
       return res.json({ id: Number(id), paymentReceived: true, paymentDate, paymentType: safePaymentType });
     }
   );
+  });
 });
 
 router.delete('/:id', (req, res) => {

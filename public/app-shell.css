@@ -64,7 +64,60 @@ h1, h2, h3, h4 { margin: 0; }
   margin: 2px 0 0;
 }
 
+/* ── User status bar ── */
+.user-status {
+  margin-left: auto;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.user-status .user-name {
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+  display: block;
+}
+.user-status .user-name:hover {
+  color: var(--accent);
+}
+.user-status .user-role {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+.user-status .user-clock {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.user-status .logout-btn {
+  margin-top: 4px;
+  padding: 3px 14px;
+  font-size: 0.78rem;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+}
+.user-status .logout-btn:hover {
+  color: #fff;
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+}
+
 .subtitle { margin: 6px 0 0; color: var(--muted); }
+
+.maps-link {
+  text-decoration: none;
+  font-size: 0.9em;
+  vertical-align: middle;
+  margin-left: 2px;
+}
 
 .card {
   background: var(--surface);

@@ -94,7 +94,7 @@ function renderPatientsTable() {
 
   if (!allClients.length) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="6" class="small">No patients found.</td>';
+    tr.innerHTML = '<td colspan="5" class="small">No patients found.</td>';
     patientsTableBody.appendChild(tr);
     pager.classList.add('hidden');
     return;
@@ -112,7 +112,6 @@ function renderPatientsTable() {
     tr.tabIndex = 0;
     tr.innerHTML = `
       <td>${client.full_name}</td>
-      <td class="small">${client.condition_notes}</td>
       <td>${client.phone || '-'}</td>
       <td>${client.email || '-'}</td>
       <td class="balance-cell" data-client-id="${client.id}"><span class="small">...</span></td>
@@ -167,6 +166,7 @@ function openEditPatient(client) {
   document.getElementById('fullName').value = client.full_name;
   document.getElementById('phone').value = client.phone || '';
   document.getElementById('email').value = client.email || '';
+  document.getElementById('patientAddress').value = client.address || '';
   document.getElementById('conditionNotes').value = client.condition_notes;
   patientEditorTitle.textContent = 'Edit Patient';
   commentsSection.classList.remove('hidden');
@@ -191,6 +191,7 @@ clientForm.addEventListener('submit', async (event) => {
     conditionNotes: document.getElementById('conditionNotes').value,
     phone: document.getElementById('phone').value,
     email: document.getElementById('email').value,
+    address: document.getElementById('patientAddress').value,
   };
 
   try {
@@ -357,6 +358,7 @@ function renderHistoryInfo() {
   historyInfo.innerHTML = `
     <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${client.phone || '—'}</span></div>
     <div class="info-row"><span class="info-label">Email</span><span class="info-value">${client.email || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Address</span><span class="info-value">${client.address ? `${client.address} ${AppCommon.mapsLink(client.address)}` : '—'}</span></div>
     <div class="info-row"><span class="info-label">Condition</span><span class="info-value">${client.condition_notes || '—'}</span></div>
     <div class="info-kpis">
       <div class="info-kpi"><span class="info-kpi-val">${total}</span><span class="info-kpi-lbl">Appointments</span></div>
@@ -393,7 +395,7 @@ function renderHistoryTable(filter) {
     const payType = row.payment_type ? ` (${row.payment_type})` : '';
     tr.innerHTML = `
       <td>${new Date(row.appointment_date).toLocaleString('en-GB')}</td>
-      <td class="small">${row.location}</td>
+      <td class="small">${row.location} ${AppCommon.mapsLink(row.location)}</td>
       <td>${row.duration_minutes}m</td>
       <td>${AppCommon.euroFromCents(row.fee_cents)}</td>
       <td><span class="${statusClass}">${statusLabel}${payType}</span></td>
@@ -404,7 +406,7 @@ function renderHistoryTable(filter) {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
 
-    if (!row.wire_received) {
+    if (!row.wire_received && new Date(row.appointment_date) <= new Date()) {
       const payBtn = document.createElement('button');
       payBtn.type = 'button';
       payBtn.className = 'outline tiny-btn';

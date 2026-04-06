@@ -41,6 +41,55 @@
     if (appView) appView.classList.toggle('hidden', !authenticated);
     const nav = document.querySelector('.main-nav');
     if (nav) nav.classList.toggle('hidden', !authenticated);
+    const userStatus = document.getElementById('user-status');
+    if (userStatus) userStatus.classList.toggle('hidden', !authenticated);
+    if (authenticated) {
+      updateUserStatus();
+    } else {
+      stopClock();
+    }
+  }
+
+  let clockInterval = null;
+
+  function updateUserStatus() {
+    const userStatus = document.getElementById('user-status');
+    if (!userStatus || !currentUser) return;
+    userStatus.innerHTML =
+      `<a href="/profile.html" class="user-name">${currentUser.fullName}</a>` +
+      `<div class="user-role">${currentUser.role}</div>` +
+      `<div class="user-clock" id="live-clock"></div>` +
+      `<button type="button" class="logout-btn">Logout</button>`;
+    userStatus.querySelector('.logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        currentUser = null;
+        setAuthenticated(false);
+        setMessage('Logged out.');
+      } catch (error) {
+        setMessage(error.message, true);
+      }
+    });
+    startClock();
+  }
+
+  function startClock() {
+    tickClock();
+    if (clockInterval) clearInterval(clockInterval);
+    clockInterval = setInterval(tickClock, 1000);
+  }
+
+  function stopClock() {
+    if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+  }
+
+  function tickClock() {
+    const el = document.getElementById('live-clock');
+    if (!el) return;
+    const now = new Date();
+    const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    el.textContent = `${date}  ${time}`;
   }
 
   function updateNavForRole() {
@@ -78,19 +127,6 @@
         }
       });
     }
-
-    document.querySelectorAll('.logout-btn').forEach((button) => {
-      button.addEventListener('click', async () => {
-        try {
-          await api('/api/auth/logout', { method: 'POST' });
-          currentUser = null;
-          setAuthenticated(false);
-          setMessage('Logged out.');
-        } catch (error) {
-          setMessage(error.message, true);
-        }
-      });
-    });
 
     document.querySelectorAll('.main-nav a').forEach((link) => {
       if (link.pathname === window.location.pathname) {
@@ -158,6 +194,12 @@
     });
   }
 
+  function mapsLink(address) {
+    if (!address) return '';
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" title="Open in Google Maps" class="maps-link">\uD83D\uDCCD</a>`;
+  }
+
   window.AppCommon = {
     api,
     setMessage,
@@ -165,5 +207,6 @@
     ensureAuth,
     confirmPayment,
     getUser: () => currentUser,
+    mapsLink,
   };
 })();
