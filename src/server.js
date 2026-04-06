@@ -32,6 +32,10 @@ app.use(
 );
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
 function requireAuth(req, res, next) {
   if (req.session && req.session.authenticated && req.session.user) {
     return next();
