@@ -87,3 +87,20 @@ router.get('/environment', (_req, res) => {
 
 module.exports = router;
 
+
+router.get('/build-info', (_req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const buildFile = path.join(__dirname, '../../.buildcount');
+    let buildCount = 0;
+    
+    if (fs.existsSync(buildFile)) {
+      buildCount = parseInt(fs.readFileSync(buildFile, 'utf8').trim() || '0', 10);
+    }
+    
+    res.json({ buildCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read build info', buildCount: 0 });
+  }
+});

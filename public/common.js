@@ -269,9 +269,21 @@
     try {
       const response = await fetch('/version.json');
       const data = await response.json();
+      
+      // Fetch build count
+      let buildCount = 0;
+      try {
+        const buildRes = await fetch('/ALTApi/auth/build-info');
+        if (buildRes.ok) {
+          const buildData = await buildRes.json();
+          buildCount = buildData.buildCount || 0;
+        }
+      } catch (_) {}
+      
       const versionBadge = document.getElementById('login-version');
       if (versionBadge) {
-        versionBadge.textContent = `v${data.version}`;
+        const displayVersion = buildCount > 0 ? `v${data.version}.${buildCount}` : `v${data.version}`;
+        versionBadge.textContent = displayVersion;
       }
     } catch (_) {
       // Silently fail
