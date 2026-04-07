@@ -916,3 +916,35 @@ button.action-delete:hover {
   color: #999;
 }
 
+
+/* Login screen version and environment info */
+.login-info {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+  font-size: 0.85rem;
+}
+
+.version-badge {
+  color: #999;
+  font-weight: 500;
+}
+
+.login-env-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.login-env-badge.login-env-development {
+  background-color: #f0f0f0;
+  color: #666;
+}
+
+.login-env-badge.login-env-production {
+  background-color: #d4edda;
+  color: #155724;
+}
