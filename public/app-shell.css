@@ -892,3 +892,24 @@ button.action-delete:hover {
 [data-theme^="dark"] .filter-summary {
   color: var(--muted);
 }
+
+/* Environment badge */
+.env-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-weight: bold;
+  display: inline-block;
+  margin: 0.25rem 0;
+}
+
+.env-badge.env-development {
+  background-color: #e0e0e0;
+  color: #666;
+}
+
+.env-badge.env-production {
+  background-color: #d4edda;
+  color: #155724;
+}
+

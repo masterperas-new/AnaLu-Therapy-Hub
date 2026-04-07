@@ -1,32 +1,35 @@
 const express = require('express');
-const { db } = require('../db/database');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+  const { db } = require('../db/database');
   const search = (req.query.q || '').trim();
-  const whereSql = search
-    ? 'WHERE lower(full_name) LIKE lower(?) OR lower(condition_notes) LIKE lower(?)'
-    : '';
-  const params = search ? [`%${search}%`, `%${search}%`] : [];
+  let whereSql = '';
+  let params = [];
 
-  db.all(
-    `SELECT id, full_name, condition_notes, phone, email, address, created_at
-     FROM clients
-     ${whereSql}
-     ORDER BY full_name ASC`,
-    params,
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to fetch clients.' });
-      }
+  if (search) {
+    whereSql = 'WHERE lower(full_name) LIKE lower($1) OR lower(condition_notes) LIKE lower($2)';
+    params = [`%${search}%`, `%${search}%`];
+  }
 
-      return res.json(rows);
-    }
-  );
+  try {
+    const rows = await db.all(
+      `SELECT id, full_name, condition_notes, phone, email, address, created_at
+       FROM clients
+       ${whereSql}
+       ORDER BY full_name ASC`,
+      params
+    );
+    return res.json(rows);
+  } catch (error) {
+    console.error('Clients fetch error:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch clients.' });
+  }
 });
 
-router.get('/:id/appointments', (req, res) => {
+router.get('/:id/appointments', async (req, res) => {
+  const { db } = require('../db/database');
   const clientId = Number(req.params.id);
   const user = req.session.user;
 
@@ -34,8 +37,13 @@ router.get('/:id/appointments', (req, res) => {
     return res.status(400).json({ error: 'Invalid client id.' });
   }
 
-  const userFilter = user.role !== 'admin' ? 'AND a.user_id = ?' : '';
-  const params = user.role !== 'admin' ? [clientId, user.id] : [clientId];
+  let userFilter = '';
+  let params = [clientId];
+
+  if (user.role !== 'admin') {
+    userFilter = 'AND a.user_id = $2';
+    params.push(user.id);
+  }
 
   const sql = `
     SELECT
@@ -53,47 +61,48 @@ router.get('/:id/appointments', (req, res) => {
       a.user_id,
       a.created_at
     FROM appointments a
-    WHERE a.client_id = ? ${userFilter}
+    WHERE a.client_id = $1 ${userFilter}
     ORDER BY a.appointment_date DESC
   `;
 
-  db.all(sql, params, (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to fetch appointment history.' });
-    }
-
+  try {
+    const rows = await db.all(sql, params);
     return res.json(rows);
-  });
+  } catch (error) {
+    console.error('Appointment history fetch error:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch appointment history.' });
+  }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
+  const { db } = require('../db/database');
   const { fullName, conditionNotes, phone, email, address } = req.body;
 
   if (!fullName || !fullName.trim() || !conditionNotes || !conditionNotes.trim()) {
     return res.status(400).json({ error: 'Client name and condition are required.' });
   }
 
-  const sql = 'INSERT INTO clients (full_name, condition_notes, phone, email, address) VALUES (?, ?, ?, ?, ?)';
-  db.run(
-    sql,
-    [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null],
-    function insertCallback(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to create client.' });
-      }
+  try {
+    const result = await db.run(
+      'INSERT INTO clients (full_name, condition_notes, phone, email, address) VALUES ($1, $2, $3, $4, $5)',
+      [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null]
+    );
 
-      return res.status(201).json({
-        id: this.lastID,
-        fullName: fullName.trim(),
-        conditionNotes: conditionNotes.trim(),
-        phone: phone || null,
-        email: email || null,
-      });
-    }
-  );
+    return res.status(201).json({
+      id: result.lastID,
+      fullName: fullName.trim(),
+      conditionNotes: conditionNotes.trim(),
+      phone: phone || null,
+      email: email || null,
+    });
+  } catch (error) {
+    console.error('Client creation error:', error.message);
+    return res.status(500).json({ error: 'Failed to create client.' });
+  }
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
+  const { db } = require('../db/database');
   const clientId = Number(req.params.id);
   const { fullName, conditionNotes, phone, email, address } = req.body;
 
@@ -105,44 +114,45 @@ router.put('/:id', (req, res) => {
     return res.status(400).json({ error: 'Client name and condition are required.' });
   }
 
-  db.run(
-    'UPDATE clients SET full_name = ?, condition_notes = ?, phone = ?, email = ?, address = ? WHERE id = ?',
-    [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, clientId],
-    function updateCallback(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to update client.' });
-      }
+  try {
+    const result = await db.run(
+      'UPDATE clients SET full_name = $1, condition_notes = $2, phone = $3, email = $4, address = $5 WHERE id = $6',
+      [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, clientId]
+    );
 
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Client not found.' });
-      }
-
-      return res.json({ id: clientId });
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Client not found.' });
     }
-  );
+
+    return res.json({ id: clientId });
+  } catch (error) {
+    console.error('Client update error:', error.message);
+    return res.status(500).json({ error: 'Failed to update client.' });
+  }
 });
 
-router.get('/:id/comments', (req, res) => {
+router.get('/:id/comments', async (req, res) => {
+  const { db } = require('../db/database');
   const clientId = Number(req.params.id);
 
   if (!Number.isInteger(clientId) || clientId <= 0) {
     return res.status(400).json({ error: 'Invalid client id.' });
   }
 
-  db.all(
-    'SELECT id, client_id, comment_date, body, created_at FROM patient_comments WHERE client_id = ? ORDER BY comment_date DESC',
-    [clientId],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to fetch comments.' });
-      }
-
-      return res.json(rows);
-    }
-  );
+  try {
+    const rows = await db.all(
+      'SELECT id, client_id, comment_date, body, created_at FROM patient_comments WHERE client_id = $1 ORDER BY comment_date DESC',
+      [clientId]
+    );
+    return res.json(rows);
+  } catch (error) {
+    console.error('Comments fetch error:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch comments.' });
+  }
 });
 
-router.post('/:id/comments', (req, res) => {
+router.post('/:id/comments', async (req, res) => {
+  const { db } = require('../db/database');
   const clientId = Number(req.params.id);
   const { commentDate, body } = req.body;
 
@@ -154,20 +164,20 @@ router.post('/:id/comments', (req, res) => {
     return res.status(400).json({ error: 'Date and comment text are required.' });
   }
 
-  db.run(
-    'INSERT INTO patient_comments (client_id, comment_date, body) VALUES (?, ?, ?)',
-    [clientId, commentDate, body.trim()],
-    function insertCallback(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to create comment.' });
-      }
-
-      return res.status(201).json({ id: this.lastID });
-    }
-  );
+  try {
+    const result = await db.run(
+      'INSERT INTO patient_comments (client_id, comment_date, body) VALUES ($1, $2, $3)',
+      [clientId, commentDate, body.trim()]
+    );
+    return res.status(201).json({ id: result.lastID });
+  } catch (error) {
+    console.error('Comment creation error:', error.message);
+    return res.status(500).json({ error: 'Failed to create comment.' });
+  }
 });
 
-router.put('/:id/comments/:commentId', (req, res) => {
+router.put('/:id/comments/:commentId', async (req, res) => {
+  const { db } = require('../db/database');
   const clientId = Number(req.params.id);
   const commentId = Number(req.params.commentId);
   const { commentDate, body } = req.body;
@@ -180,24 +190,25 @@ router.put('/:id/comments/:commentId', (req, res) => {
     return res.status(400).json({ error: 'Date and comment text are required.' });
   }
 
-  db.run(
-    'UPDATE patient_comments SET comment_date = ?, body = ? WHERE id = ? AND client_id = ?',
-    [commentDate, body.trim(), commentId, clientId],
-    function updateCallback(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to update comment.' });
-      }
+  try {
+    const result = await db.run(
+      'UPDATE patient_comments SET comment_date = $1, body = $2 WHERE id = $3 AND client_id = $4',
+      [commentDate, body.trim(), commentId, clientId]
+    );
 
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Comment not found.' });
-      }
-
-      return res.json({ id: commentId });
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Comment not found.' });
     }
-  );
+
+    return res.json({ id: commentId });
+  } catch (error) {
+    console.error('Comment update error:', error.message);
+    return res.status(500).json({ error: 'Failed to update comment.' });
+  }
 });
 
-router.delete('/:id/comments/:commentId', (req, res) => {
+router.delete('/:id/comments/:commentId', async (req, res) => {
+  const { db } = require('../db/database');
   const clientId = Number(req.params.id);
   const commentId = Number(req.params.commentId);
 
@@ -205,21 +216,21 @@ router.delete('/:id/comments/:commentId', (req, res) => {
     return res.status(400).json({ error: 'Invalid comment id.' });
   }
 
-  db.run(
-    'DELETE FROM patient_comments WHERE id = ? AND client_id = ?',
-    [commentId, clientId],
-    function deleteCallback(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to delete comment.' });
-      }
+  try {
+    const result = await db.run(
+      'DELETE FROM patient_comments WHERE id = $1 AND client_id = $2',
+      [commentId, clientId]
+    );
 
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Comment not found.' });
-      }
-
-      return res.sendStatus(204);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Comment not found.' });
     }
-  );
+
+    return res.sendStatus(204);
+  } catch (error) {
+    console.error('Comment deletion error:', error.message);
+    return res.status(500).json({ error: 'Failed to delete comment.' });
+  }
 });
 
 module.exports = router;

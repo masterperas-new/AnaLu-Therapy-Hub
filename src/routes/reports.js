@@ -1,42 +1,43 @@
 const express = require('express');
-const { db } = require('../db/database');
 
 const router = express.Router();
 
-router.get('/monthly', (req, res) => {
-  const month = req.query.month;
-  const user = req.session.user;
+router.get('/monthly', async (req, res) => {
+  
+  try {
+    const month = req.query.month;
+    const user = req.session.user;
 
-  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
-    return res.status(400).json({ error: 'Month is required in YYYY-MM format.' });
-  }
-
-  let userFilter = '';
-  const params = [month];
-  if (user.role !== 'admin') {
-    userFilter = 'AND user_id = ?';
-    params.push(user.id);
-  } else if (req.query.userId) {
-    userFilter = 'AND user_id = ?';
-    params.push(Number(req.query.userId));
-  }
-
-  const sql = `
-    SELECT
-      COUNT(*) AS total_appointments,
-      SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-      SUM(CASE WHEN wire_received = 0 AND appointment_date <= date('now') THEN 1 ELSE 0 END) AS owed_appointments,
-      COALESCE(SUM(fee_cents), 0) AS total_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date <= date('now') THEN fee_cents ELSE 0 END), 0) AS owed_cents
-    FROM appointments
-    WHERE strftime('%Y-%m', appointment_date) = ? ${userFilter}
-  `;
-
-  db.get(sql, params, (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to build monthly report.' });
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Month is required in YYYY-MM format.' });
     }
+
+    let userFilter = '';
+    const params = [month];
+    let paramIndex = 2;
+    if (user.role !== 'admin') {
+      userFilter = `AND user_id = $${paramIndex}`;
+      params.push(user.id);
+      paramIndex++;
+    } else if (req.query.userId) {
+      userFilter = `AND user_id = $${paramIndex}`;
+      params.push(Number(req.query.userId));
+      paramIndex++;
+    }
+
+    const sql = `
+      SELECT
+        COUNT(*) AS total_appointments,
+        SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
+        SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+        COALESCE(SUM(fee_cents), 0) AS total_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
+      FROM appointments
+      WHERE to_char(appointment_date, 'YYYY-MM') = $1 ${userFilter}
+    `;
+
+    const row = await db.get(sql, params);
 
     return res.json({
       month,
@@ -47,43 +48,48 @@ router.get('/monthly', (req, res) => {
       paidCents: row.paid_cents,
       owedCents: row.owed_cents,
     });
-  });
+  } catch (err) {
+    console.error('Error building monthly report:', err);
+    return res.status(500).json({ error: 'Failed to build monthly report.' });
+  }
 });
 
-router.get('/yearly', (req, res) => {
-  const year = req.query.year;
-  const user = req.session.user;
+router.get('/yearly', async (req, res) => {
+  
+  try {
+    const year = req.query.year;
+    const user = req.session.user;
 
-  if (!year || !/^\d{4}$/.test(year)) {
-    return res.status(400).json({ error: 'Year is required in YYYY format.' });
-  }
-
-  let userFilter = '';
-  const params = [year];
-  if (user.role !== 'admin') {
-    userFilter = 'AND user_id = ?';
-    params.push(user.id);
-  } else if (req.query.userId) {
-    userFilter = 'AND user_id = ?';
-    params.push(Number(req.query.userId));
-  }
-
-  const sql = `
-    SELECT
-      COUNT(*) AS total_appointments,
-      SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-      SUM(CASE WHEN wire_received = 0 THEN 1 ELSE 0 END) AS owed_appointments,
-      COALESCE(SUM(fee_cents), 0) AS total_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS owed_cents
-    FROM appointments
-    WHERE strftime('%Y', appointment_date) = ? ${userFilter}
-  `;
-
-  db.get(sql, params, (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to build yearly report.' });
+    if (!year || !/^\d{4}$/.test(year)) {
+      return res.status(400).json({ error: 'Year is required in YYYY format.' });
     }
+
+    let userFilter = '';
+    const params = [year];
+    let paramIndex = 2;
+    if (user.role !== 'admin') {
+      userFilter = `AND user_id = $${paramIndex}`;
+      params.push(user.id);
+      paramIndex++;
+    } else if (req.query.userId) {
+      userFilter = `AND user_id = $${paramIndex}`;
+      params.push(Number(req.query.userId));
+      paramIndex++;
+    }
+
+    const sql = `
+      SELECT
+        COUNT(*) AS total_appointments,
+        SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
+        SUM(CASE WHEN wire_received = 0 THEN 1 ELSE 0 END) AS owed_appointments,
+        COALESCE(SUM(fee_cents), 0) AS total_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS owed_cents
+      FROM appointments
+      WHERE to_char(appointment_date, 'YYYY') = $1 ${userFilter}
+    `;
+
+    const row = await db.get(sql, params);
 
     return res.json({
       year,
@@ -94,37 +100,42 @@ router.get('/yearly', (req, res) => {
       paidCents: row.paid_cents,
       owedCents: row.owed_cents,
     });
-  });
+  } catch (err) {
+    console.error('Error building yearly report:', err);
+    return res.status(500).json({ error: 'Failed to build yearly report.' });
+  }
 });
 
-router.get('/total', (req, res) => {
-  const user = req.session.user;
-  let userFilter = '';
-  const params = [];
-  if (user.role !== 'admin') {
-    userFilter = 'WHERE user_id = ?';
-    params.push(user.id);
-  } else if (req.query.userId) {
-    userFilter = 'WHERE user_id = ?';
-    params.push(Number(req.query.userId));
-  }
-
-  const sql = `
-    SELECT
-      COUNT(*) AS total_appointments,
-      SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-      SUM(CASE WHEN wire_received = 0 AND appointment_date <= date('now') THEN 1 ELSE 0 END) AS owed_appointments,
-      COALESCE(SUM(fee_cents), 0) AS total_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date <= date('now') THEN fee_cents ELSE 0 END), 0) AS owed_cents
-    FROM appointments
-    ${userFilter}
-  `;
-
-  db.get(sql, params, (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to build total report.' });
+router.get('/total', async (req, res) => {
+  
+  try {
+    const user = req.session.user;
+    let userFilter = '';
+    const params = [];
+    let paramIndex = 1;
+    if (user.role !== 'admin') {
+      userFilter = `WHERE user_id = $${paramIndex}`;
+      params.push(user.id);
+      paramIndex++;
+    } else if (req.query.userId) {
+      userFilter = `WHERE user_id = $${paramIndex}`;
+      params.push(Number(req.query.userId));
+      paramIndex++;
     }
+
+    const sql = `
+      SELECT
+        COUNT(*) AS total_appointments,
+        SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
+        SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+        COALESCE(SUM(fee_cents), 0) AS total_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
+      FROM appointments
+      ${userFilter}
+    `;
+
+    const row = await db.get(sql, params);
 
     return res.json({
       totalAppointments: row.total_appointments,
@@ -134,37 +145,42 @@ router.get('/total', (req, res) => {
       paidCents: row.paid_cents,
       owedCents: row.owed_cents,
     });
-  });
+  } catch (err) {
+    console.error('Error building total report:', err);
+    return res.status(500).json({ error: 'Failed to build total report.' });
+  }
 });
 
-router.get('/future', (req, res) => {
-  const user = req.session.user;
-  let userFilter = '';
-  const params = [];
-  if (user.role !== 'admin') {
-    userFilter = 'AND user_id = ?';
-    params.push(user.id);
-  } else if (req.query.userId) {
-    userFilter = 'AND user_id = ?';
-    params.push(Number(req.query.userId));
-  }
-
-  const sql = `
-    SELECT
-      COUNT(*) AS total_appointments,
-      SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-      SUM(CASE WHEN wire_received = 0 THEN 1 ELSE 0 END) AS unpaid_appointments,
-      COALESCE(SUM(fee_cents), 0) AS total_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-      COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS unpaid_cents
-    FROM appointments
-    WHERE appointment_date > date('now') ${userFilter}
-  `;
-
-  db.get(sql, params, (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to build future report.' });
+router.get('/future', async (req, res) => {
+  
+  try {
+    const user = req.session.user;
+    let userFilter = '';
+    const params = [];
+    let paramIndex = 1;
+    if (user.role !== 'admin') {
+      userFilter = `AND user_id = $${paramIndex}`;
+      params.push(user.id);
+      paramIndex++;
+    } else if (req.query.userId) {
+      userFilter = `AND user_id = $${paramIndex}`;
+      params.push(Number(req.query.userId));
+      paramIndex++;
     }
+
+    const sql = `
+      SELECT
+        COUNT(*) AS total_appointments,
+        SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
+        SUM(CASE WHEN wire_received = 0 THEN 1 ELSE 0 END) AS unpaid_appointments,
+        COALESCE(SUM(fee_cents), 0) AS total_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
+        COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS unpaid_cents
+      FROM appointments
+      WHERE appointment_date > CURRENT_DATE ${userFilter}
+    `;
+
+    const row = await db.get(sql, params);
 
     return res.json({
       totalAppointments: row.total_appointments,
@@ -174,7 +190,10 @@ router.get('/future', (req, res) => {
       paidCents: row.paid_cents,
       unpaidCents: row.unpaid_cents,
     });
-  });
+  } catch (err) {
+    console.error('Error building future report:', err);
+    return res.status(500).json({ error: 'Failed to build future report.' });
+  }
 });
 
 module.exports = router;
