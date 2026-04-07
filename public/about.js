@@ -35,8 +35,16 @@ function buildVersionCard(release, isCurrent) {
 
 async function loadVersion() {
   const data = await AppCommon.api('/version.json');
-
-  versionBadge.textContent = `v${data.version}`;
+  
+  // Fetch build count
+  let buildCount = 0;
+  try {
+    const buildRes = await AppCommon.api('/ALTApi/auth/build-info');
+    buildCount = buildRes.buildCount || 0;
+  } catch (_) {}
+  
+  const displayVersion = buildCount > 0 ? `v${data.version}.${buildCount}` : `v${data.version}`;
+  versionBadge.textContent = displayVersion;
   releaseDate.textContent = `Released ${formatDate(data.releaseDate)}`;
 
   versionHistory.innerHTML = '';
