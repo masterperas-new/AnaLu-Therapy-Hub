@@ -105,7 +105,11 @@ async function initializeDatabaseSchema() {
   try {
     if (isPostgres) {
       // PostgreSQL initialization
-      await db.run('SET session_replication_role = replica');
+      try {
+        await db.run('SET session_replication_role = replica');
+      } catch (_) {
+        // NeonDB doesn't allow this, continue anyway
+      }
 
       // Create users table
       await db.run(`
@@ -201,7 +205,11 @@ async function initializeDatabaseSchema() {
         )
       `);
 
-      await db.run('SET session_replication_role = DEFAULT');
+      try {
+        await db.run('SET session_replication_role = DEFAULT');
+      } catch (_) {
+        // NeonDB doesn't allow this, continue anyway
+      }
     } else {
       // SQLite initialization
       await db.run('PRAGMA foreign_keys = ON');
