@@ -1,7 +1,22 @@
 {
-  "version": "1.2",
-  "releaseDate": "2026-04-06",
+  "version": "2.0",
+  "releaseDate": "2026-04-07",
   "history": [
+    {
+      "version": "2.0",
+      "date": "2026-04-07",
+      "summary": "Session persistence fixes, lazy database loading, API restructuring, favicon.",
+      "changes": [
+        "Fixed session persistence issue by including credentials in fetch requests",
+        "Implemented lazy loading of database module across all route handlers",
+        "Fixed SQL syntax for SQLite in reports endpoints (monthly, yearly, total, future)",
+        "Changed API URL structure from /api/ to /ALTApi/ for all endpoints",
+        "Made index.html the landing page for better user experience",
+        "Added SVG favicon to all HTML pages for branded browser tab appearance",
+        "Consolidated database connections for improved reliability",
+        "Ensured session authentication persists across page navigation"
+      ]
+    },
     {
       "version": "1.2",
       "date": "2026-04-06",
