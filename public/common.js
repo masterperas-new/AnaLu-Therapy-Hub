@@ -87,9 +87,8 @@
     const userStatus = document.getElementById('user-status');
     if (!userStatus || !currentUser) return;
     const isAdmin = currentUser.role === 'admin';
-    const adminBadge = isAdmin ? '<span class="admin-badge">Admin</span>' : '';
     userStatus.innerHTML =
-      `<a href="/profile.html" class="user-name">${currentUser.fullName}${adminBadge}</a>` +
+      `<span id="env-badge" class="env-badge"></span><a href="/profile.html" class="user-name">${currentUser.fullName}</a>` +
       `<div class="user-role">${currentUser.role}</div>` +
       `<div class="user-clock" id="live-clock"></div>` +
       `<div class="theme-picker">` +
