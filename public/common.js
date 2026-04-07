@@ -293,17 +293,6 @@
 
 
 
-  // Initialize login screen info
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
-      loadVersionInfo();
-      loadEnvironmentBadge();
-    });
-  } else {
-    loadVersionInfo();
-    loadEnvironmentBadge();
-  }
-
   window.AppCommon = {
     api,
     setMessage,

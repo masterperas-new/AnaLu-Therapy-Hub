@@ -52,9 +52,14 @@ router.post('/login', async (req, res) => {
       theme: user.theme || null,
     };
 
-    return res.json({
-      authenticated: true,
-      user: req.session.user,
+    req.session.save((err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Session save failed.' });
+      }
+      return res.json({
+        authenticated: true,
+        user: req.session.user,
+      });
     });
   } catch (error) {
     console.error('Login error:', error.message);
