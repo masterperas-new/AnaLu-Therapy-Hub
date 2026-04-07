@@ -18,6 +18,7 @@ const port = Number(process.env.PORT) || 8080;
 initializeDatabase()
   .then(() => {
     app.use(express.json());
+    const isProduction = process.env.NODE_ENV === 'production';
     app.use(
       session({
         name: 'client-intelligence.sid',
@@ -27,7 +28,7 @@ initializeDatabase()
         cookie: {
           httpOnly: true,
           sameSite: 'lax',
-          secure: false,
+          secure: isProduction,
           maxAge: 1000 * 60 * 60 * 8,
         },
       })
