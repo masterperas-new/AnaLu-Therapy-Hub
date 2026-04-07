@@ -19,6 +19,10 @@ initializeDatabase()
   .then(() => {
     app.use(express.json());
     const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Trust proxy (for Vercel)
+    app.set('trust proxy', 1);
+    
     app.use(
       session({
         name: 'client-intelligence.sid',
@@ -28,7 +32,7 @@ initializeDatabase()
         cookie: {
           httpOnly: true,
           sameSite: 'lax',
-          secure: isProduction,
+          secure: isProduction ? 'auto' : false,
           maxAge: 1000 * 60 * 60 * 8,
         },
       })
