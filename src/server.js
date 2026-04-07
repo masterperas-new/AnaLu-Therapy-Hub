@@ -26,7 +26,8 @@ initializeDatabase()
         saveUninitialized: false,
         cookie: {
           httpOnly: true,
-          sameSite: 'lax',
+          sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'none',
+          secure: process.env.NODE_ENV === 'production',
           maxAge: 1000 * 60 * 60 * 8,
         },
       })
