@@ -330,6 +330,13 @@ async function loadAll() {
 
 AppCommon.ensureAuth(async () => {
   const user = AppCommon.getUser();
+  
+  // Block admin access to revenue - redirect to home
+  if (user && user.role === 'admin') {
+    window.location.href = '/index.html';
+    return;
+  }
+  
   isAdmin = user && user.role === 'admin';
 
   const now = new Date();

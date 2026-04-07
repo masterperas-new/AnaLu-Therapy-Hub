@@ -8,6 +8,11 @@ router.get('/monthly', async (req, res) => {
   try {
     const month = req.query.month;
     const user = req.session.user;
+  
+  // Therapists only - admins cannot access revenue reports
+  if (user.role === 'admin') {
+    return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+  }
 
     if (!month || !/^\d{4}-\d{2}$/.test(month)) {
       return res.status(400).json({ error: 'Month is required in YYYY-MM format.' });
@@ -61,6 +66,10 @@ router.get('/yearly', async (req, res) => {
   try {
     const year = req.query.year;
     const user = req.session.user;
+    // Therapists only - admins cannot access revenue reports
+    if (req.session.user.role === 'admin') {
+      return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+    }
 
     if (!year || !/^\d{4}$/.test(year)) {
       return res.status(400).json({ error: 'Year is required in YYYY format.' });
@@ -113,6 +122,10 @@ router.get('/total', async (req, res) => {
   const { db } = require('../db/database');
   try {
     const user = req.session.user;
+    // Therapists only - admins cannot access revenue reports
+    if (req.session.user.role === 'admin') {
+      return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+    }
     let userFilter = '';
     const params = [];
     let paramIndex = 1;
@@ -159,6 +172,15 @@ router.get('/future', async (req, res) => {
   const { db } = require('../db/database');
   try {
     const user = req.session.user;
+    // Therapists only - admins cannot access revenue reports
+    if (req.session.user.role === 'admin') {
+      return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+    }
+    
+    // Therapists only - admins cannot access revenue reports
+    if (user.role === 'admin') {
+      return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+    }
     let userFilter = '';
     const params = [];
     let paramIndex = 1;

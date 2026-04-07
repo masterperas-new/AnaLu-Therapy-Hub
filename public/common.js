@@ -136,6 +136,9 @@
     document.querySelectorAll('[data-admin-only]').forEach((el) => {
       el.style.display = currentUser.role === 'admin' ? '' : 'none';
     });
+    document.querySelectorAll('[data-therapist-only]').forEach((el) => {
+      el.style.display = currentUser.role === 'therapist' ? '' : 'none';
+    });
   }
 
   async function loadEnvironmentBadge() {
