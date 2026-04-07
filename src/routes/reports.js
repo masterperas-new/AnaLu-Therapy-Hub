@@ -35,7 +35,7 @@ router.get('/monthly', async (req, res) => {
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
         COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
-      WHERE to_char(appointment_date, 'YYYY-MM') = $1 ${userFilter}
+      WHERE strftime('%Y-%m', appointment_date) = $1 ${userFilter}
     `;
 
     const row = await db.get(sql, params);
@@ -88,7 +88,7 @@ router.get('/yearly', async (req, res) => {
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
         COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
-      WHERE to_char(appointment_date, 'YYYY') = $1 ${userFilter}
+      WHERE strftime('%Y', appointment_date) = $1 ${userFilter}
     `;
 
     const row = await db.get(sql, params);
