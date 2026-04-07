@@ -14,6 +14,7 @@
   async function api(url, options = {}) {
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...(options.headers || {}),
@@ -138,6 +139,19 @@
     });
   }
 
+  async function loadEnvironmentBadge() {
+    try {
+      const env = await api('/ALTApi/auth/environment');
+      const badge = document.getElementById('env-badge');
+      if (badge) {
+        badge.innerHTML = `${env.environment.toUpperCase()}: ${env.database.toUpperCase()}`;
+        badge.className = `env-badge env-${env.environment}`;
+      }
+    } catch (_) {
+      // Silently fail if endpoint unavailable
+    }
+  }
+
   async function ensureAuth(onAuthenticated) {
     const loginForm = document.getElementById('login-form');
 
@@ -159,6 +173,7 @@
           loginForm.reset();
           setAuthenticated(true);
           updateNavForRole();
+          await loadEnvironmentBadge();
           await onAuthenticated();
           setMessage(`Logged in as ${currentUser.fullName}.`);
         } catch (error) {
@@ -179,6 +194,7 @@
         currentUser = session.user;
         setAuthenticated(true);
         updateNavForRole();
+        await loadEnvironmentBadge();
         await onAuthenticated();
       } else {
         setAuthenticated(false);
