@@ -144,7 +144,14 @@
   async function loadEnvironmentBadge() {
     try {
       const env = await api('/ALTApi/auth/environment');
-      const badge = document.getElementById('env-badge');
+      // Try login screen badge first
+      let badge = document.getElementById('login-env-badge');
+      if (badge) {
+        badge.textContent = `${env.environment.toUpperCase()}: ${env.database.toUpperCase()}`;
+        badge.className = `login-env-badge login-env-${env.environment}`;
+      }
+      // Also update user status badge
+      badge = document.getElementById('env-badge');
       if (badge) {
         badge.innerHTML = `${env.environment.toUpperCase()}: ${env.database.toUpperCase()}`;
         badge.className = `env-badge env-${env.environment}`;
@@ -255,6 +262,46 @@
     if (!address) return '';
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     return `<a href="${url}" target="_blank" rel="noopener noreferrer" title="Open in Google Maps" class="maps-link">\uD83D\uDCCD</a>`;
+  }
+
+  
+  async function loadVersionInfo() {
+    try {
+      const response = await fetch('/version.json');
+      const data = await response.json();
+      const versionBadge = document.getElementById('login-version');
+      if (versionBadge) {
+        versionBadge.textContent = `v${data.version}`;
+      }
+    } catch (_) {
+      // Silently fail
+    }
+  }
+
+
+  // Initialize login screen info on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async () => {
+      loadVersionInfo();
+      loadEnvironmentBadge();
+    });
+  } else {
+    // Already loaded
+    loadVersionInfo();
+    loadEnvironmentBadge();
+  }
+
+
+
+  // Initialize login screen info
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async () => {
+      loadVersionInfo();
+      loadEnvironmentBadge();
+    });
+  } else {
+    loadVersionInfo();
+    loadEnvironmentBadge();
   }
 
   window.AppCommon = {
