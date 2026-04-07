@@ -5,6 +5,7 @@ const router = express.Router();
 
 /* List active therapists — any authenticated user (used by appointment form) */
 router.get('/therapists', async (req, res) => {
+  const { db } = require('../db/database');
   
   try {
     const rows = await db.all(
@@ -20,6 +21,7 @@ router.get('/therapists', async (req, res) => {
 
 /* List users — admin only */
 router.get('/', async (req, res) => {
+  const { db } = require('../db/database');
   
   if (req.session.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required.' });
@@ -39,6 +41,7 @@ router.get('/', async (req, res) => {
 
 /* Create user — admin only */
 router.post('/', async (req, res) => {
+  const { db } = require('../db/database');
   
   if (req.session.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required.' });
@@ -76,6 +79,7 @@ router.post('/', async (req, res) => {
 
 /* Update user — admin can update anyone, therapist can update self only */
 router.put('/:id', async (req, res) => {
+  const { db } = require('../db/database');
   
   const userId = Number(req.params.id);
   const isAdmin = req.session.user.role === 'admin';
@@ -137,6 +141,7 @@ router.put('/:id', async (req, res) => {
 
 /* Save theme preference */
 router.patch('/:id/theme', async (req, res) => {
+  const { db } = require('../db/database');
   
   const userId = Number(req.params.id);
   if (req.session.user.id !== userId) {
@@ -157,6 +162,7 @@ router.patch('/:id/theme', async (req, res) => {
 
 /* Block / unblock user — admin only, cannot block self */
 router.patch('/:id/block', async (req, res) => {
+  const { db } = require('../db/database');
   
   if (req.session.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required.' });

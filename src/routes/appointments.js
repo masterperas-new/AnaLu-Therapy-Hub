@@ -33,7 +33,7 @@ async function getDefaultFeeCents() {
 }
 
 router.get('/', async (req, res) => {
-  
+  const { db } = require("../db/database");
   try {
     const { month, start, end, q, clientId, wireReceived, paymentType, from, to, userId } = req.query;
     const user = req.session.user;
@@ -138,7 +138,7 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  
+  const { db } = require("../db/database");
   try {
     const appointmentId = Number(req.params.id);
     const user = req.session.user;
@@ -187,7 +187,7 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  
+  const { db } = require("../db/database");
   try {
     const {
       clientId,
@@ -285,7 +285,7 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  
+  const { db } = require("../db/database");
   try {
     const appointmentId = Number(req.params.id);
     const user = req.session.user;
@@ -392,7 +392,7 @@ router.put('/:id', async (req, res) => {
 });
 
 router.patch('/:id/payment-received', async (req, res) => {
-  
+  const { db } = require("../db/database");
   try {
     const { id } = req.params;
     const user = req.session.user;
@@ -438,7 +438,7 @@ router.patch('/:id/payment-received', async (req, res) => {
 });
 
 router.delete('/:id', async (req, res) => {
-  
+  const { db } = require("../db/database");
   try {
     const appointmentId = Number(req.params.id);
     const user = req.session.user;

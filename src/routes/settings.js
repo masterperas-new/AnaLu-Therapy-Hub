@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 router.get('/', async (_req, res) => {
-  
+  const { db } = require('../db/database');
   try {
     const row = await db.get(
       "SELECT value FROM settings WHERE key = $1",
@@ -19,7 +19,7 @@ router.get('/', async (_req, res) => {
 });
 
 router.put('/', async (req, res) => {
-  
+  const { db } = require('../db/database');
   try {
     const defaultFeeAmount = Number(req.body.defaultFeeAmount);
     const defaultFeeCents = Math.round(defaultFeeAmount * 100);
