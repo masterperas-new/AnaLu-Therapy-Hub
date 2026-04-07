@@ -4,6 +4,7 @@ const router = express.Router();
 
 router.get('/monthly', async (req, res) => {
   
+  const { db } = require('../db/database');
   try {
     const month = req.query.month;
     const user = req.session.user;
@@ -56,6 +57,7 @@ router.get('/monthly', async (req, res) => {
 
 router.get('/yearly', async (req, res) => {
   
+  const { db } = require('../db/database');
   try {
     const year = req.query.year;
     const user = req.session.user;
@@ -108,6 +110,7 @@ router.get('/yearly', async (req, res) => {
 
 router.get('/total', async (req, res) => {
   
+  const { db } = require('../db/database');
   try {
     const user = req.session.user;
     let userFilter = '';
@@ -153,6 +156,7 @@ router.get('/total', async (req, res) => {
 
 router.get('/future', async (req, res) => {
   
+  const { db } = require('../db/database');
   try {
     const user = req.session.user;
     let userFilter = '';
