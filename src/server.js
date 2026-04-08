@@ -24,33 +24,9 @@ initializeDatabase()
     // Trust proxy (for Vercel)
     app.set('trust proxy', 1);
     
-    // Session store configuration
-    let sessionStore = new session.MemoryStore();
-    
-    // Try to use PostgreSQL session store if DATABASE_URL is available
-    if (process.env.DATABASE_URL) {
-      try {
-        
-        const { Pool } = require('pg');
-        const pool = new Pool({
-          connectionString: process.env.DATABASE_URL,
-          ssl: { rejectUnauthorized: false },
-          max: 2, // Limit connections for Vercel
-          idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 5000,
-        });
-        
-        sessionStore = new pgSession({
-          pool: pool,
-          tableName: 'session',
-          createTableIfMissing: true,
-        });
-        console.log('[Session Store] PostgreSQL configured');
-      } catch (err) {
-        console.warn('[Session Store] PostgreSQL init failed, using memory:', err.message);
-        sessionStore = new session.MemoryStore();
-      }
-    }
+    // Session store configuration - use memory store for all environments
+    const sessionStore = new session.MemoryStore();
+    console.log('[Session Store] Using memory store');
 
     app.use(
       session({
@@ -67,23 +43,62 @@ initializeDatabase()
       })
     );
 
-    process.on('SIGINT', async () => {
-      try {
-        const { db } = require('./db/database');
-        await db.close();
-        console.log('Database connection closed.');
-      } catch (err) {
-        console.error('Error closing database:', err.message);
-      }
-      process.exit(0);
+    app.use(express.static(path.join(__dirname, '..', 'public')));
+
+    app.get('/', (_req, res) => {
+      res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
     });
+
+    function requireAuth(req, res, next) {
+      if (req.session && req.session.authenticated && req.session.user) {
+        return next();
+      }
+
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    function requireAdmin(req, res, next) {
+      if (req.session && req.session.user && req.session.user.role === 'admin') {
+        return next();
+      }
+
+      return res.status(403).json({ error: 'Admin access required.' });
+    }
+
+    app.get('/ALTApi/health', (_req, res) => {
+      res.json({ status: 'ok' });
+    });
+
+    app.use('/ALTApi/auth', authRouter);
+    app.use('/ALTApi/clients', requireAuth, clientsRouter);
+    app.use('/ALTApi/appointments', requireAuth, appointmentsRouter);
+    app.use('/ALTApi/reports', requireAuth, reportsRouter);
+    app.use('/ALTApi/settings', requireAuth, settingsRouter);
+    app.use('/ALTApi/users', requireAuth, usersRouter);
+
+    // Start server
+    if (process.env.VERCEL) {
+      // For Vercel serverless, export the app
+      module.exports = app;
+    } else {
+      // For local development, start server normally
+      app.listen(port, () => {
+        console.log(`Server running at http://localhost:${port}`);
+      });
+
+      process.on('SIGINT', async () => {
+        try {
+          const { db } = require('./db/database');
+          await db.close();
+          console.log('Database connection closed.');
+        } catch (err) {
+          console.error('Error closing database:', err.message);
+        }
+        process.exit(0);
+      });
+    }
   })
   .catch((err) => {
     console.error('Failed to initialize database:', err);
     process.exit(1);
   });
-
-// Export for Vercel serverless
-if (process.env.VERCEL) {
-  module.exports = app;
-}
