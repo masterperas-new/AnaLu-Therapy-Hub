@@ -364,19 +364,18 @@ router.put('/:id', async (req, res) => {
 
     let paramIndex = 11;
     if (assignedUserId) {
-      paramIndex++;
-      setCols.push(`user_id = $${paramIndex}`);
+      setCols.push(`user_id = ${paramIndex}`);
       updateParams.push(assignedUserId);
+      paramIndex++;
     }
 
-    paramIndex++;
     const idParamIndex = paramIndex;
     updateParams.push(appointmentId);
+    paramIndex++;
     
     let userFilter = '';
     if (user.role !== 'admin') {
-      paramIndex++;
-      userFilter = ` AND user_id = $${paramIndex}`;
+      userFilter = ` AND user_id = ${paramIndex}`;
       updateParams.push(user.id);
     }
 
