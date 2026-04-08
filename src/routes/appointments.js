@@ -380,7 +380,7 @@ router.put('/:id', async (req, res) => {
       updateParams.push(user.id);
     }
 
-    const sql = `UPDATE appointments SET ${setCols.join(', ')} WHERE id = $${idParamIndex}$${userFilter}`;
+    const sql = `UPDATE appointments SET ${setCols.join(', ')} WHERE id = ${idParamIndex}${userFilter}`;
 
     const result = await db.run(sql, updateParams);
 
