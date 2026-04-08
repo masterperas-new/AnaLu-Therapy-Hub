@@ -1,7 +1,22 @@
 {
-  "version": "2.0",
-  "releaseDate": "2026-04-07",
+  "version": "2.1",
+  "releaseDate": "2026-04-08",
   "history": [
+    {
+      "version": "2.1",
+      "date": "2026-04-08",
+      "summary": "PostgreSQL session persistence, build counter, production-ready Vercel deployment.",
+      "changes": [
+        "PostgreSQL session store for Vercel serverless — sessions now persist across function instances",
+        "Build counter implementation — version displays as v2.1.X for tracking deployments",
+        "Environment indicator (DEV: SQLite / PROD: NeonDB) displayed in bottom-right corner",
+        "Auto-detection of DATABASE_URL for production database switching",
+        "/ALTApi/auth/build-info endpoint exposes build counter to frontend",
+        "Session cookie configuration with HTTPS auto-detection for production",
+        "Connect-pg-simple integration for safe serverless session storage",
+        "Fallback to memory store if PostgreSQL unavailable (graceful degradation)"
+      ]
+    },
     {
       "version": "2.0",
       "date": "2026-04-07",
