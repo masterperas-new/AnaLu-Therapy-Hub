@@ -458,7 +458,7 @@ appointmentForm.addEventListener('submit', async (event) => {
 
     await loadAppointments();
     clearForm();
-    closeEditor();
+    setTimeout(closeEditor, 1500);
   } catch (error) {
     AppCommon.setMessage(error.message, true);
   }
