@@ -92,10 +92,10 @@ router.get('/yearly', async (req, res) => {
       SELECT
         COUNT(*) AS total_appointments,
         SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-        SUM(CASE WHEN wire_received = 0 THEN 1 ELSE 0 END) AS owed_appointments,
+        SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
         COALESCE(SUM(fee_cents), 0) AS total_cents,
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-        COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS owed_cents
+        COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
       WHERE strftime('%Y', appointment_date) = $1 ${userFilter}
     `;
