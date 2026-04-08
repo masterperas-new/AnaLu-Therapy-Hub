@@ -14,72 +14,73 @@ async function initializeDatabase() {
       const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 5000,
-        idleTimeoutMillis: 5000,
+        connectionTimeoutMillis: 3000,
+        idleTimeoutMillis: 3000,
       });
-      
+
+      db = {
+        pool,
+        async get(sql, params = []) {
+          try {
+            const result = await pool.query(sql, params);
+            return result.rows[0] || null;
+          } catch (err) {
+            console.error('Database error:', err.message);
+            throw err;
+          }
+        },
+        async all(sql, params = []) {
+          try {
+            const result = await pool.query(sql, params);
+            return result.rows;
+          } catch (err) {
+            console.error('Database error:', err.message);
+            throw err;
+          }
+        },
+        async run(sql, params = []) {
+          try {
+            const result = await pool.query(sql, params);
+            return { lastID: result.rows[0]?.id, changes: result.rowCount };
+          } catch (err) {
+            console.error('Database error:', err.message);
+            throw err;
+          }
+        },
+        async close() {
+          await pool.end();
+        },
+      };
+
       // Test connection with timeout
-      const testPromise = pool.query('SELECT 1');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Connection timeout')), 5000)
-      );
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       
-      await Promise.race([testPromise, timeoutPromise]);
-      console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
-
-    db = {
-      pool,
-      async get(sql, params = []) {
-        try {
-          const result = await pool.query(sql, params);
-          return result.rows[0] || null;
-        } catch (err) {
-          console.error('Database error:', err.message);
-          throw err;
-        }
-      },
-      async all(sql, params = []) {
-        try {
-          const result = await pool.query(sql, params);
-          return result.rows;
-        } catch (err) {
-          console.error('Database error:', err.message);
-          throw err;
-        }
-      },
-      async run(sql, params = []) {
-        try {
-          const result = await pool.query(sql, params);
-          return { lastID: result.rows[0]?.id, changes: result.rowCount };
-        } catch (err) {
-          console.error('Database error:', err.message);
-          throw err;
-        }
-      },
-      async close() {
-        await pool.end();
-      },
-    };
-
-      console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
+      try {
+        await pool.query('SELECT 1');
+        clearTimeout(timeoutId);
+        console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
+      } catch (testErr) {
+        clearTimeout(timeoutId);
+        throw testErr;
+      }
     } catch (pgErr) {
       console.warn('[NeonDB] Connection failed, falling back to SQLite:', pgErr.message);
       isPostgres = false;
+      db = null;
     }
   }
-  
-  if (!isPostgres && process.env.DATABASE_URL) {
-    // Fall back to SQLite if PostgreSQL failed
-  } else if (!isPostgres) {
-    // Use SQLite for local development
+
+  // Use SQLite if no DATABASE_URL or PostgreSQL failed
+  if (!isPostgres) {
     const sqlite3 = require('sqlite3').verbose();
+    const path = require('path');
     const dbPath = path.join(__dirname, '..', '..', 'data', 'app.db');
     const sqlite = new sqlite3.Database(dbPath);
 
     db = {
       async get(sql, params = []) {
         return new Promise((resolve, reject) => {
-          // Convert $1, $2 placeholders to ?
           const convertedSql = sql.replace(/\$\d+/g, '?');
           sqlite.get(convertedSql, params, (err, row) => {
             if (err) reject(err);
@@ -115,7 +116,7 @@ async function initializeDatabase() {
       },
     };
 
-    console.log('[SQLite] Using local SQLite database at ' + dbPath + ' (DEVELOPMENT)');
+    console.log('[SQLite] Using SQLite database (DEVELOPMENT/FALLBACK)');
   }
 
   await initializeDatabaseSchema();
