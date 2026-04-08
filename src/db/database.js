@@ -127,7 +127,7 @@ async function initializeDatabaseSchema() {
     if (isPostgres) {
       // PostgreSQL initialization
       try {
-        await db.run('SET session_replication_role = replica');
+        // Skipped: session_replication_role (NeonDB permission issue)
       } catch (_) {
         // NeonDB doesn't allow this, continue anyway
       }

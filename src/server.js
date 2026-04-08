@@ -77,28 +77,31 @@ initializeDatabase()
     app.use('/ALTApi/users', requireAuth, usersRouter);
 
     // Start server
-    if (process.env.VERCEL) {
-      // For Vercel serverless, export the app
-      module.exports = app;
-    } else {
-      // For local development, start server normally
-      app.listen(port, () => {
-        console.log(`Server running at http://localhost:${port}`);
-      });
+    if (process.env.PORT) {
+      // Running in serverless or development
+      // For local development, start server
+      if (!process.env.VERCEL) {
+        app.listen(port, () => {
+          console.log(`Server running at http://localhost:${port}`);
+        });
 
-      process.on('SIGINT', async () => {
-        try {
-          const { db } = require('./db/database');
-          await db.close();
-          console.log('Database connection closed.');
-        } catch (err) {
-          console.error('Error closing database:', err.message);
-        }
-        process.exit(0);
-      });
+        process.on('SIGINT', async () => {
+          try {
+            const { db } = require('./db/database');
+            await db.close();
+            console.log('Database connection closed.');
+          } catch (err) {
+            console.error('Error closing database:', err.message);
+          }
+          process.exit(0);
+        });
+      }
     }
   })
   .catch((err) => {
     console.error('Failed to initialize database:', err);
     process.exit(1);
   });
+
+// Always export app for Vercel serverless
+module.exports = app;
