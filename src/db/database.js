@@ -69,7 +69,9 @@ async function initializeDatabase() {
           connected = true;
           break;
         } catch (testErr) {
-          console.warn(`[NeonDB] Connection attempt ${attempt}/3 failed: ${testErr.message}`);
+          const rawUrl = process.env.DATABASE_URL || '(not set)';
+          const maskedUrl = rawUrl.replace(/:([^@/]+)@/, ':***@');
+          console.warn(`[NeonDB] Connection attempt ${attempt}/3 failed: ${testErr.message} | DATABASE_URL: ${maskedUrl}`);
           if (attempt < 3) {
             await new Promise(r => setTimeout(r, 2000));
           } else {
