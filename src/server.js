@@ -82,3 +82,8 @@ initializeDatabase()
     console.error('Failed to initialize database:', err);
     process.exit(1);
   });
+
+// Export for Vercel serverless
+if (process.env.VERCEL) {
+  module.exports = app;
+}
