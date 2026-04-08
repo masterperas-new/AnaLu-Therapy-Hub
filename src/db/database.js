@@ -78,13 +78,17 @@ async function initializeDatabase() {
         }
       }
     } catch (pgErr) {
+      // Log the connection string (mask password) to help debug
+      const rawUrl = process.env.DATABASE_URL || '(not set)';
+      const maskedUrl = rawUrl.replace(/:([^@/]+)@/, ':***@');
       console.error('[NeonDB] Connection failed:', pgErr.message);
+      console.error('[NeonDB] DATABASE_URL:', maskedUrl);
       isPostgres = false;
       db = null;
       
       // On Vercel, SQLite won't work (read-only filesystem) — fail loudly
       if (process.env.VERCEL) {
-        throw new Error('[NeonDB] PostgreSQL connection failed on Vercel. SQLite is not available. Error: ' + pgErr.message);
+        throw new Error('[NeonDB] PostgreSQL connection failed on Vercel. SQLite is not available. DATABASE_URL=' + maskedUrl + ' Error: ' + pgErr.message);
       }
       console.warn('[NeonDB] Falling back to SQLite');
     }
