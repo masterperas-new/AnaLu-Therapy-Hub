@@ -68,7 +68,7 @@
       applyTheme(currentUser.theme);
       return;
     }
-    const defaultTheme = currentUser && currentUser.role === 'admin' ? 'dark-green' : 'light-green';
+    const defaultTheme = 'light-blue';
     applyTheme(defaultTheme);
   }
 
@@ -91,9 +91,6 @@
       `<span id="env-badge" class="env-badge"></span><a href="/profile.html" class="user-name">${currentUser.fullName}</a>` +
       `<div class="user-role">${currentUser.role}</div>` +
       `<div class="user-clock" id="live-clock"></div>` +
-      `<div class="theme-picker">` +
-        THEMES.map((t) => `<button type="button" class="theme-swatch theme-swatch--${t}" data-theme="${t}" title="${THEME_LABELS[t]}"></button>`).join('') +
-      `</div>` +
       `<button type="button" class="logout-btn">Logout</button>`;
     userStatus.querySelector('.logout-btn').addEventListener('click', async () => {
       try {
@@ -105,9 +102,7 @@
         setMessage(error.message, true);
       }
     });
-    userStatus.querySelectorAll('.theme-swatch').forEach((btn) => {
-      btn.addEventListener('click', () => setTheme(btn.dataset.theme));
-    });
+    
     loadTheme();
     startClock();
   }
