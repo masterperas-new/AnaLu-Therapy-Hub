@@ -21,8 +21,9 @@ async function initializeDatabase() {
       const pool = new Pool({
         connectionString,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 5000,
-        idleTimeoutMillis: 10000,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 3,
       });
 
       db = {
@@ -59,17 +60,22 @@ async function initializeDatabase() {
         },
       };
 
-      // Test connection with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
-      try {
-        await pool.query('SELECT 1');
-        clearTimeout(timeoutId);
-        console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
-      } catch (testErr) {
-        clearTimeout(timeoutId);
-        throw testErr;
+      // Test connection with retries (NeonDB cold starts can take several seconds)
+      let connected = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await pool.query('SELECT 1');
+          console.log(`[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION) on attempt ${attempt}`);
+          connected = true;
+          break;
+        } catch (testErr) {
+          console.warn(`[NeonDB] Connection attempt ${attempt}/3 failed: ${testErr.message}`);
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, 2000));
+          } else {
+            throw testErr;
+          }
+        }
       }
     } catch (pgErr) {
       console.error('[NeonDB] Connection failed:', pgErr.message);
