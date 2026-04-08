@@ -104,3 +104,17 @@ router.get('/build-info', (_req, res) => {
     res.status(500).json({ error: 'Failed to read build info', buildCount: 0 });
   }
 });
+
+// Build info endpoint
+router.get('/build-info', (_req, res) => {
+  try {
+    const buildCountPath = require('path').join(__dirname, '../../.buildcount');
+    const fs = require('fs');
+    const buildCount = fs.existsSync(buildCountPath) 
+      ? parseInt(fs.readFileSync(buildCountPath, 'utf8').trim() || '0', 10)
+      : 0;
+    res.json({ buildCount });
+  } catch (err) {
+    res.json({ buildCount: 0 });
+  }
+});

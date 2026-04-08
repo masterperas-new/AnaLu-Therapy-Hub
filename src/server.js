@@ -2,6 +2,13 @@ require('dotenv').config();
 
 const express = require('express');
 const session = require('express-session');
+const pgSession = (() => {
+  try {
+    return require('connect-pg-simple')(session);
+  } catch (err) {
+    return null;
+  }
+})();
 const path = require('path');
 const { initializeDatabase } = require('./db/database');
 const authRouter = require('./routes/auth');
@@ -23,8 +30,29 @@ initializeDatabase()
     // Trust proxy (for Vercel)
     app.set('trust proxy', 1);
     
+    // Setup session store for Vercel
+    let sessionStore = new session.MemoryStore();
+    if (process.env.DATABASE_URL && pgSession) {
+      try {
+        const { Pool } = require('pg');
+        const pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: { rejectUnauthorized: false }
+        });
+        sessionStore = new pgSession({
+          pool: pool,
+          tableName: 'session',
+          createTableIfMissing: true
+        });
+        console.log('[Session Store] Connected to PostgreSQL');
+      } catch (err) {
+        console.warn('[Session Store] Using memory:', err.message);
+      }
+    }
+    
     app.use(
       session({
+        store: sessionStore,
         name: 'client-intelligence.sid',
         secret: process.env.SESSION_SECRET || 'change-this-session-secret',
         resave: false,
