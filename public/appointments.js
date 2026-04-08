@@ -101,6 +101,14 @@ async function loadClients() {
     filterClientSelect.appendChild(option);
   });
 }
+// Preload address from selected patient
+clientSelect.addEventListener('change', () => {
+  const clientId = Number(clientSelect.value);
+  if (clientId && clientsById.has(clientId)) {
+    const client = clientsById.get(clientId);
+    document.getElementById('address').value = client.address || '';
+  }
+});
 
 async function loadSettings() {
   const settings = await AppCommon.api('/ALTApi/settings');
