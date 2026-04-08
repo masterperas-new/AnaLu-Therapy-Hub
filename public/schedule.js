@@ -89,6 +89,7 @@ function parseFeeAmount(value) {
 
 async function loadClients() {
   const clients = await AppCommon.api('/ALTApi/clients');
+  clientsById = new Map(clients.map((client) => [client.id, client]));
   clientSelect.innerHTML = '';
 
   const placeholder = document.createElement('option');
@@ -105,6 +106,14 @@ async function loadClients() {
     clientSelect.appendChild(option);
   });
 }
+
+// Preload address when patient selected
+clientSelect.addEventListener('change', () => {
+  const clientId = Number(clientSelect.value);
+  if (clientId && clientsById.has(clientId)) {
+    document.getElementById('address').value = clientsById.get(clientId).address || '';
+  }
+});
 
 async function loadSettings() {
   const settings = await AppCommon.api('/ALTApi/settings');

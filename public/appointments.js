@@ -79,6 +79,7 @@ function closeEditor() {
   }, 220);
 }
 
+let clientsById = new Map();
 async function loadClients() {
   const clients = await AppCommon.api('/ALTApi/clients');
   clientsById = new Map(clients.map((client) => [client.id, client]));
