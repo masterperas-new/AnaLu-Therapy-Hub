@@ -330,7 +330,7 @@ router.put('/:id', async (req, res) => {
     const paidDate = paid ? new Date().toISOString() : null;
 
     /* Admin can reassign therapist; therapist can only edit own */
-    const userFilter = user.role !== 'admin' ? `AND user_id = $12` : '';
+    // userFilter will be calculated after determining final param index
     const assignedUserId = (user.role === 'admin' && userId) ? Number(userId) : null;
 
     if (assignedUserId && assignedUserId === user.id) {
@@ -370,13 +370,17 @@ router.put('/:id', async (req, res) => {
     }
 
     paramIndex++;
+    const idParamIndex = paramIndex;
     updateParams.push(appointmentId);
+    
+    let userFilter = '';
     if (user.role !== 'admin') {
       paramIndex++;
+      userFilter = ` AND user_id = $${paramIndex}`;
       updateParams.push(user.id);
     }
 
-    const sql = `UPDATE appointments SET ${setCols.join(', ')} WHERE id = $${paramIndex} ${userFilter}`;
+    const sql = `UPDATE appointments SET ${setCols.join(', ')} WHERE id = $${idParamIndex}$${userFilter}`;
 
     const result = await db.run(sql, updateParams);
 
