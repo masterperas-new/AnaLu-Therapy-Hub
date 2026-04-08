@@ -210,6 +210,7 @@
           fullName: fd.get('fullName'),
           phone: fd.get('phone') || null,
           role: fd.get('role'),
+          password: fd.get('password') || undefined,
         }),
       });
       closeDrawer();
