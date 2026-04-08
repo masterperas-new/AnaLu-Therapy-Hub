@@ -11,11 +11,18 @@ async function initializeDatabase() {
     try {
       isPostgres = true;
       const { Pool } = require('pg');
+      
+      // Strip channel_binding from connection string (not supported by NeonDB pooler/PgBouncer)
+      let connectionString = process.env.DATABASE_URL;
+      connectionString = connectionString.replace(/[&?]channel_binding=[^&]*/g, '');
+      // Clean up trailing ? if params were all removed
+      connectionString = connectionString.replace(/\?$/, '');
+      
       const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
+        connectionString,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 3000,
-        idleTimeoutMillis: 3000,
+        connectionTimeoutMillis: 5000,
+        idleTimeoutMillis: 10000,
       });
 
       db = {
@@ -65,9 +72,15 @@ async function initializeDatabase() {
         throw testErr;
       }
     } catch (pgErr) {
-      console.warn('[NeonDB] Connection failed, falling back to SQLite:', pgErr.message);
+      console.error('[NeonDB] Connection failed:', pgErr.message);
       isPostgres = false;
       db = null;
+      
+      // On Vercel, SQLite won't work (read-only filesystem) — fail loudly
+      if (process.env.VERCEL) {
+        throw new Error('[NeonDB] PostgreSQL connection failed on Vercel. SQLite is not available. Error: ' + pgErr.message);
+      }
+      console.warn('[NeonDB] Falling back to SQLite');
     }
   }
 
