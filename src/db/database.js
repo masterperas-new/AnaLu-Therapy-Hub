@@ -7,13 +7,25 @@ let isPostgres = false;
 // Initialize database based on environment
 async function initializeDatabase() {
   if (process.env.DATABASE_URL) {
-    // Use PostgreSQL/NeonDB for production
-    isPostgres = true;
-    const { Pool } = require('pg');
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }, // NeonDB requires SSL
-    });
+    // Try PostgreSQL/NeonDB for production
+    try {
+      isPostgres = true;
+      const { Pool } = require('pg');
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 5000,
+        idleTimeoutMillis: 5000,
+      });
+      
+      // Test connection with timeout
+      const testPromise = pool.query('SELECT 1');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      );
+      
+      await Promise.race([testPromise, timeoutPromise]);
+      console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
 
     db = {
       pool,
@@ -49,8 +61,16 @@ async function initializeDatabase() {
       },
     };
 
-    console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
-  } else {
+      console.log('[NeonDB] Connected to NeonDB PostgreSQL database (PRODUCTION)');
+    } catch (pgErr) {
+      console.warn('[NeonDB] Connection failed, falling back to SQLite:', pgErr.message);
+      isPostgres = false;
+    }
+  }
+  
+  if (!isPostgres && process.env.DATABASE_URL) {
+    // Fall back to SQLite if PostgreSQL failed
+  } else if (!isPostgres) {
     // Use SQLite for local development
     const sqlite3 = require('sqlite3').verbose();
     const dbPath = path.join(__dirname, '..', '..', 'data', 'app.db');
