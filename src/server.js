@@ -30,7 +30,7 @@ initializeDatabase()
     // Try to use PostgreSQL session store if DATABASE_URL is available
     if (process.env.DATABASE_URL) {
       try {
-        const pgSession = require('connect-pg-simple')(session);
+        
         const { Pool } = require('pg');
         const pool = new Pool({
           connectionString: process.env.DATABASE_URL,
