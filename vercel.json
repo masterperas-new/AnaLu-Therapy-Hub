@@ -1,11 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "src/server.js",
-      "use": "@vercel/node"
+  "buildCommand": "npm install",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "express",
+  "functions": {
+    "src/server.js": {
+      "memory": 1024,
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
@@ -13,6 +16,6 @@
     }
   ],
   "env": {
-    "PORT": "3000"
+    "NODE_ENV": "production"
   }
 }

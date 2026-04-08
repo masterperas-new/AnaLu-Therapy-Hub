@@ -2,13 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const session = require('express-session');
-const pgSession = (() => {
-  try {
-    return require('connect-pg-simple')(session);
-  } catch (err) {
-    return null;
-  }
-})();
+
 const path = require('path');
 const { initializeDatabase } = require('./db/database');
 const authRouter = require('./routes/auth');
