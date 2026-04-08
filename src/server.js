@@ -30,77 +30,48 @@ initializeDatabase()
     // Trust proxy (for Vercel)
     app.set('trust proxy', 1);
     
-    // Setup session store for Vercel
+    // Session store configuration
     let sessionStore = new session.MemoryStore();
-    if (process.env.DATABASE_URL && pgSession) {
+    
+    // Try to use PostgreSQL session store if DATABASE_URL is available
+    if (process.env.DATABASE_URL) {
       try {
+        const pgSession = require('connect-pg-simple')(session);
         const { Pool } = require('pg');
         const pool = new Pool({
           connectionString: process.env.DATABASE_URL,
-          ssl: { rejectUnauthorized: false }
+          ssl: { rejectUnauthorized: false },
+          max: 2, // Limit connections for Vercel
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 5000,
         });
+        
         sessionStore = new pgSession({
           pool: pool,
           tableName: 'session',
-          createTableIfMissing: true
+          createTableIfMissing: true,
         });
-        console.log('[Session Store] Connected to PostgreSQL');
+        console.log('[Session Store] PostgreSQL configured');
       } catch (err) {
-        console.warn('[Session Store] Using memory:', err.message);
+        console.warn('[Session Store] PostgreSQL init failed, using memory:', err.message);
+        sessionStore = new session.MemoryStore();
       }
     }
-    
+
     app.use(
       session({
         store: sessionStore,
-        name: 'client-intelligence.sid',
-        secret: process.env.SESSION_SECRET || 'change-this-session-secret',
+        secret: 'your-secret-key',
         resave: false,
         saveUninitialized: false,
         cookie: {
           httpOnly: true,
           sameSite: 'lax',
-          secure: isProduction ? 'auto' : false,
+          secure: isProduction ? true : false,
           maxAge: 1000 * 60 * 60 * 8,
         },
       })
     );
-    app.use(express.static(path.join(__dirname, '..', 'public')));
-
-    app.get('/', (_req, res) => {
-      res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-    });
-
-    function requireAuth(req, res, next) {
-      if (req.session && req.session.authenticated && req.session.user) {
-        return next();
-      }
-
-      return res.status(401).json({ error: 'Authentication required.' });
-    }
-
-    function requireAdmin(req, res, next) {
-      if (req.session && req.session.user && req.session.user.role === 'admin') {
-        return next();
-      }
-
-      return res.status(403).json({ error: 'Admin access required.' });
-    }
-
-    app.get('/ALTApi/health', (_req, res) => {
-      res.json({ status: 'ok' });
-    });
-
-    app.use('/ALTApi/auth', authRouter);
-    app.use('/ALTApi/clients', requireAuth, clientsRouter);
-    app.use('/ALTApi/appointments', requireAuth, appointmentsRouter);
-    app.use('/ALTApi/reports', requireAuth, reportsRouter);
-    app.use('/ALTApi/settings', requireAuth, settingsRouter);
-    app.use('/ALTApi/users', requireAuth, usersRouter);
-
-    app.listen(port, () => {
-      console.log(`Server running at http://localhost:${port}`);
-    });
 
     process.on('SIGINT', async () => {
       try {
