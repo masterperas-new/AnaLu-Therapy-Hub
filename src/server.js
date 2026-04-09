@@ -23,14 +23,41 @@ app.use(express.json());
 // Trust proxy (for Vercel)
 app.set('trust proxy', 1);
 
-// Session store configuration - use memory store for all environments
-const sessionStore = new session.MemoryStore();
-console.log('[Session Store] Using memory store');
+// Session store configuration
+let sessionStore;
+
+if (process.env.DATABASE_URL) {
+  // Use PostgreSQL for session storage (required for Vercel serverless)
+  const pgSession = require('connect-pg-simple')(session);
+  let sessionPool;
+
+  if (process.env.VERCEL) {
+    const { Pool: NeonPool, neonConfig } = require('@neondatabase/serverless');
+    const ws = require('ws');
+    neonConfig.webSocketConstructor = ws;
+    let connStr = process.env.DATABASE_URL.replace(/[&?]channel_binding=[^&]*/g, '').replace(/\?$/, '');
+    sessionPool = new NeonPool({ connectionString: connStr, ssl: { rejectUnauthorized: false }, max: 2 });
+  } else {
+    const { Pool } = require('pg');
+    let connStr = process.env.DATABASE_URL.replace(/[&?]channel_binding=[^&]*/g, '').replace(/\?$/, '');
+    sessionPool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false }, max: 2 });
+  }
+
+  sessionStore = new pgSession({
+    pool: sessionPool,
+    tableName: 'session',
+    createTableIfMissing: true,
+  });
+  console.log('[Session Store] Using PostgreSQL session store');
+} else {
+  sessionStore = new session.MemoryStore();
+  console.log('[Session Store] Using memory store');
+}
 
 app.use(
   session({
     store: sessionStore,
-    secret: 'your-secret-key',
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
