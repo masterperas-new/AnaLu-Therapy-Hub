@@ -1,7 +1,23 @@
 {
-  "version": "2.1",
-  "releaseDate": "2026-04-08",
+  "version": "2.2",
+  "releaseDate": "2026-04-09",
   "history": [
+    {
+      "version": "2.2",
+      "date": "2026-04-09",
+      "summary": "Therapist selector for admins, Vercel session persistence, Revenue Control fixes, last login tracking.",
+      "changes": [
+        "Therapist selector in Quick Add Appointment — admins can assign a therapist when creating appointments",
+        "PostgreSQL session store via connect-pg-simple — sessions persist across Vercel serverless invocations",
+        "Revenue Control reports fixed for PostgreSQL — replaced SQLite strftime() with PG-compatible to_char()",
+        "ensureAuth no longer redirects to login on page-level API errors",
+        "Last login tracking — login timestamp recorded and displayed in User Management table",
+        "NeonDB connection using @neondatabase/serverless WebSocket Pool driver for Vercel",
+        "Express routes registered synchronously for Vercel serverless compatibility",
+        "Fixed PostgreSQL parameter placeholder bugs in appointment update queries",
+        "Cleaned up duplicate build-info routes in auth module"
+      ]
+    },
     {
       "version": "2.1",
       "date": "2026-04-08",
