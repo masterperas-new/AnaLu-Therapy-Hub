@@ -21,20 +21,20 @@ async function initializeDatabase() {
 
       let pool;
       
-      // Use @neondatabase/serverless on Vercel (HTTP-based, no TCP needed)
+      // Use @neondatabase/serverless on Vercel (WebSocket-based, works in serverless)
       if (process.env.VERCEL) {
-        const { neon } = require('@neondatabase/serverless');
-        const sql = neon(connectionString);
+        const { Pool: NeonPool, neonConfig } = require('@neondatabase/serverless');
+        const ws = require('ws');
+        neonConfig.webSocketConstructor = ws;
         
-        // Wrap neon's sql function to match pg Pool interface
-        pool = {
-          query: async (text, params) => {
-            const rows = await sql(text, params || []);
-            return { rows, rowCount: rows.length };
-          },
-          end: async () => {},
-        };
-        console.log('[NeonDB] Using @neondatabase/serverless driver (Vercel)');
+        pool = new NeonPool({
+          connectionString,
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000,
+          idleTimeoutMillis: 30000,
+          max: 3,
+        });
+        console.log('[NeonDB] Using @neondatabase/serverless Pool driver (Vercel)');
       } else {
         const { Pool } = require('pg');
         pool = new Pool({
