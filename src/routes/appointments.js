@@ -364,7 +364,7 @@ router.put('/:id', async (req, res) => {
 
     let paramIndex = 11;
     if (assignedUserId) {
-      setCols.push(`user_id = ${paramIndex}`);
+      setCols.push(`user_id = $${paramIndex}`);
       updateParams.push(assignedUserId);
       paramIndex++;
     }
@@ -375,7 +375,7 @@ router.put('/:id', async (req, res) => {
     
     let userFilter = '';
     if (user.role !== 'admin') {
-      userFilter = ` AND user_id = ${paramIndex}`;
+      userFilter = ` AND user_id = $${paramIndex}`;
       updateParams.push(user.id);
     }
 
