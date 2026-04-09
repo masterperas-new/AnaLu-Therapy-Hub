@@ -14,6 +14,8 @@ const appointmentForm = document.getElementById('appointment-form');
 const clientSelect = document.getElementById('clientId');
 const feeInput = document.getElementById('feeAmount');
 const appointmentDateInput = document.getElementById('appointmentDate');
+const therapistFieldWrap = document.getElementById('therapist-field-wrap');
+const therapistSelect = document.getElementById('therapistId');
 
 function prefillDate(date) {
   const d = new Date(date);
@@ -118,6 +120,21 @@ clientSelect.addEventListener('change', () => {
 async function loadSettings() {
   const settings = await AppCommon.api('/ALTApi/settings');
   feeInput.placeholder = (settings.defaultFeeCents / 100).toFixed(2);
+}
+
+async function loadTherapists() {
+  const user = AppCommon.getUser();
+  if (!user || user.role !== 'admin') return;
+
+  therapistFieldWrap.classList.remove('hidden');
+  const therapists = await AppCommon.api('/ALTApi/users/therapists');
+  therapistSelect.innerHTML = '<option value="" selected disabled>Select a therapist</option>';
+  therapists.forEach((t) => {
+    const option = document.createElement('option');
+    option.value = String(t.id);
+    option.textContent = t.full_name;
+    therapistSelect.appendChild(option);
+  });
 }
 
 async function loadAppointments() {
@@ -243,6 +260,7 @@ appointmentForm.addEventListener('submit', async (event) => {
       throw new Error('Please select a patient.');
     }
 
+    const user = AppCommon.getUser();
     const payload = {
       clientId: Number(data.get('clientId')),
       appointmentDate: new Date(data.get('appointmentDate')).toISOString(),
@@ -250,6 +268,12 @@ appointmentForm.addEventListener('submit', async (event) => {
       durationMinutes: Number(data.get('durationMinutes') || 60),
       comments: data.get('comments'),
     };
+
+    if (user && user.role === 'admin') {
+      const selTherapist = therapistSelect.value;
+      if (!selTherapist) throw new Error('Please select a therapist.');
+      payload.userId = Number(selTherapist);
+    }
 
     const feeAmount = parseFeeAmount(data.get('feeAmount'));
     if (Number.isNaN(feeAmount)) {
@@ -267,6 +291,7 @@ appointmentForm.addEventListener('submit', async (event) => {
     appointmentForm.reset();
     document.getElementById('durationMinutes').value = '60';
     clientSelect.selectedIndex = 0;
+    if (therapistSelect) therapistSelect.selectedIndex = 0;
     AppCommon.setMessage('Appointment created.');
     await loadAppointments();
   } catch (error) {
@@ -276,7 +301,7 @@ appointmentForm.addEventListener('submit', async (event) => {
 
 async function initPage() {
   calendarView.value = 'week';
-  await Promise.all([loadClients(), loadSettings(), loadAppointments()]);
+  await Promise.all([loadClients(), loadSettings(), loadTherapists(), loadAppointments()]);
 }
 
 AppCommon.ensureAuth(initPage);
