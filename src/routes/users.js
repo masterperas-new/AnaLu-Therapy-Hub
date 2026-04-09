@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
   try {
     const rows = await db.all(
-      'SELECT id, username, role, full_name, phone, blocked, created_at FROM users ORDER BY full_name ASC',
+      'SELECT id, username, role, full_name, phone, blocked, last_login, created_at FROM users ORDER BY full_name ASC',
       []
     );
     return res.json(rows);

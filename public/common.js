@@ -199,7 +199,11 @@
         setAuthenticated(true);
         updateNavForRole();
         await loadEnvironmentBadge();
-        await onAuthenticated();
+        try {
+          await onAuthenticated();
+        } catch (appErr) {
+          setMessage(appErr.message, true);
+        }
       } else {
         setAuthenticated(false);
       }

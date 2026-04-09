@@ -102,7 +102,7 @@
 
     if (!allUsers.length) {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="7" class="small">No users found.</td>';
+      tr.innerHTML = '<td colspan="8" class="small">No users found.</td>';
       usersTableBody.appendChild(tr);
       return;
     }
@@ -123,6 +123,9 @@
         : '<span class="status-paid">Active</span>';
 
       const created = user.created_at ? user.created_at.slice(0, 10) : '';
+      const lastLogin = user.last_login
+        ? new Date(user.last_login).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Never';
 
       tr.innerHTML = `
         <td>${escapeHtml(user.full_name)}</td>
@@ -130,6 +133,7 @@
         <td>${roleBadge}</td>
         <td>${escapeHtml(user.phone || '-')}</td>
         <td>${statusBadge}</td>
+        <td class="small">${lastLogin}</td>
         <td class="small">${created}</td>
       `;
 

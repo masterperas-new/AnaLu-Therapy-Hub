@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.get('/monthly', async (req, res) => {
   
-  const { db } = require('../db/database');
+  const { db, isPostgres } = require('../db/database');
   try {
     const month = req.query.month;
     const user = req.session.user;
@@ -40,7 +40,7 @@ router.get('/monthly', async (req, res) => {
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
         COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
-      WHERE strftime('%Y-%m', appointment_date) = $1 ${userFilter}
+      WHERE ${isPostgres ? "to_char(appointment_date::timestamp, 'YYYY-MM')" : "strftime('%Y-%m', appointment_date)"} = $1 ${userFilter}
     `;
 
     const row = await db.get(sql, params);
@@ -62,7 +62,7 @@ router.get('/monthly', async (req, res) => {
 
 router.get('/yearly', async (req, res) => {
   
-  const { db } = require('../db/database');
+  const { db, isPostgres } = require('../db/database');
   try {
     const year = req.query.year;
     const user = req.session.user;
@@ -97,7 +97,7 @@ router.get('/yearly', async (req, res) => {
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
         COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
-      WHERE strftime('%Y', appointment_date) = $1 ${userFilter}
+      WHERE ${isPostgres ? "to_char(appointment_date::timestamp, 'YYYY')" : "strftime('%Y', appointment_date)"} = $1 ${userFilter}
     `;
 
     const row = await db.get(sql, params);

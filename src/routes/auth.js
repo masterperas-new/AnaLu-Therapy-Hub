@@ -42,6 +42,9 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Your account has been blocked. Contact an administrator.' });
     }
 
+    // Record last login timestamp
+    await db.run('UPDATE users SET last_login = $1 WHERE id = $2', [new Date().toISOString(), user.id]);
+
     req.session.authenticated = true;
     req.session.user = {
       id: user.id,
@@ -85,36 +88,17 @@ router.get('/environment', (_req, res) => {
   });
 });
 
-module.exports = router;
-
-
 router.get('/build-info', (_req, res) => {
   try {
     const fs = require('fs');
-    const path = require('path');
-    const buildFile = path.join(__dirname, '../../.buildcount');
-    let buildCount = 0;
-    
-    if (fs.existsSync(buildFile)) {
-      buildCount = parseInt(fs.readFileSync(buildFile, 'utf8').trim() || '0', 10);
-    }
-    
-    res.json({ buildCount });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to read build info', buildCount: 0 });
-  }
-});
-
-// Build info endpoint
-router.get('/build-info', (_req, res) => {
-  try {
-    const buildCountPath = require('path').join(__dirname, '../../.buildcount');
-    const fs = require('fs');
-    const buildCount = fs.existsSync(buildCountPath) 
-      ? parseInt(fs.readFileSync(buildCountPath, 'utf8').trim() || '0', 10)
+    const buildFile = require('path').join(__dirname, '../../.buildcount');
+    const buildCount = fs.existsSync(buildFile)
+      ? parseInt(fs.readFileSync(buildFile, 'utf8').trim() || '0', 10)
       : 0;
     res.json({ buildCount });
   } catch (err) {
     res.json({ buildCount: 0 });
   }
 });
+
+module.exports = router;

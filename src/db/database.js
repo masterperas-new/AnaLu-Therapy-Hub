@@ -189,9 +189,17 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           blocked INTEGER NOT NULL DEFAULT 0,
           theme TEXT,
+          last_login TIMESTAMP,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Add last_login column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Seed admin user if not exists
       const adminUser = await db.get(
@@ -291,9 +299,17 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           blocked INTEGER NOT NULL DEFAULT 0,
           theme TEXT,
+          last_login TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Add last_login column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE users ADD COLUMN last_login TEXT`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Seed admin user if not exists
       const adminUser = await db.get(
@@ -380,6 +396,9 @@ module.exports = {
       throw new Error('Database not initialized. Call initializeDatabase() first.');
     }
     return db;
+  },
+  get isPostgres() {
+    return isPostgres;
   },
   initializeDatabase,
 };
