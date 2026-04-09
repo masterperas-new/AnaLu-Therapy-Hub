@@ -10,21 +10,42 @@ async function initializeDatabase() {
     // Try PostgreSQL/NeonDB for production
     try {
       isPostgres = true;
-      const { Pool } = require('pg');
       
       // Strip channel_binding from connection string (not supported by NeonDB pooler/PgBouncer)
       let connectionString = process.env.DATABASE_URL;
       connectionString = connectionString.replace(/[&?]channel_binding=[^&]*/g, '');
-      // Clean up trailing ? if params were all removed
       connectionString = connectionString.replace(/\?$/, '');
       
-      const pool = new Pool({
-        connectionString,
-        ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 3,
-      });
+      const maskedUrl = connectionString.replace(/:([^@/]+)@/, ':***@');
+      console.log('[NeonDB] Connecting with URL:', maskedUrl);
+
+      let pool;
+      
+      // Use @neondatabase/serverless on Vercel (HTTP-based, no TCP needed)
+      if (process.env.VERCEL) {
+        const { neon } = require('@neondatabase/serverless');
+        const sql = neon(connectionString);
+        
+        // Wrap neon's sql function to match pg Pool interface
+        pool = {
+          query: async (text, params) => {
+            const rows = await sql(text, params || []);
+            return { rows, rowCount: rows.length };
+          },
+          end: async () => {},
+        };
+        console.log('[NeonDB] Using @neondatabase/serverless driver (Vercel)');
+      } else {
+        const { Pool } = require('pg');
+        pool = new Pool({
+          connectionString,
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000,
+          idleTimeoutMillis: 30000,
+          max: 3,
+        });
+        console.log('[NeonDB] Using pg driver (Docker/Local)');
+      }
 
       db = {
         pool,
