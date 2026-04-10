@@ -1,7 +1,18 @@
 {
-  "version": "2.2",
-  "releaseDate": "2026-04-09",
+  "version": "2.3",
+  "releaseDate": "2026-04-10",
   "history": [
+    {
+      "version": "2.3",
+      "date": "2026-04-10",
+      "summary": "Password strength meter, theme-aware logo and login, session cookie fix.",
+      "changes": [
+        "Password strength indicator on all password fields (new user, edit user, profile)",
+        "SVG logo uses currentColor — follows the active theme colour",
+        "Default CSS theme is now light-blue; login screen no longer appears green",
+        "Session cookie uses secure:auto — works on both HTTP (Docker) and HTTPS (Vercel)"
+      ]
+    },
     {
       "version": "2.2",
       "date": "2026-04-09",
