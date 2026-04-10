@@ -304,6 +304,26 @@
 
 
 
+  function attachPasswordStrength(input) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="pwd-strength"><div class="pwd-strength-bar" data-level="0"></div></div><div class="pwd-strength-label"></div>';
+    input.parentNode.insertBefore(wrap, input.nextSibling);
+    const bar = wrap.querySelector('.pwd-strength-bar');
+    const label = wrap.querySelector('.pwd-strength-label');
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+
+    input.addEventListener('input', () => {
+      const v = input.value;
+      let score = 0;
+      if (v.length >= 4) score++;
+      if (v.length >= 8) score++;
+      if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+      if (/[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v)) score++;
+      bar.setAttribute('data-level', v.length === 0 ? '0' : String(score));
+      label.textContent = v.length === 0 ? '' : labels[score];
+    });
+  }
+
   window.AppCommon = {
     api,
     setMessage,
@@ -312,5 +332,6 @@
     confirmPayment,
     getUser: () => currentUser,
     mapsLink,
+    attachPasswordStrength,
   };
 })();

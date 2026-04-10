@@ -1,5 +1,5 @@
 (function initUsers() {
-  const { api, setMessage, getUser } = window.AppCommon;
+  const { api, setMessage, getUser, attachPasswordStrength } = window.AppCommon;
 
   const addForm = document.getElementById('add-user-form');
   const nameInput = document.getElementById('newFullName');
@@ -21,6 +21,9 @@
 
   let allUsers = [];
   let usernameManuallyEdited = false;
+
+  attachPasswordStrength(document.getElementById('newPassword'));
+  attachPasswordStrength(document.getElementById('editPassword'));
 
   function escapeHtml(str) {
     const div = document.createElement('div');

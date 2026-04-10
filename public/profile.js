@@ -1,7 +1,9 @@
 (function initProfile() {
-  const { api, setMessage, getUser } = window.AppCommon;
+  const { api, setMessage, getUser, attachPasswordStrength } = window.AppCommon;
   const profileForm = document.getElementById('profile-form');
   const passwordForm = document.getElementById('password-form');
+
+  attachPasswordStrength(document.getElementById('newPwd'));
 
   function populateProfile() {
     const user = getUser();

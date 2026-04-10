@@ -1,40 +1,5 @@
-/* ── Light-Green (default) ── */
+/* ── Light-Blue (default) ── */
 :root,
-[data-theme="light-green"] {
-  color-scheme: light;
-  --bg: #f2f8f7;
-  --surface: #ffffff;
-  --surface-2: #f5fbfa;
-  --text: #1c2d2b;
-  --muted: #5f7676;
-  --accent: #0f766e;
-  --accent-2: #0a5c74;
-  --border: #d7e5e2;
-  --ok: #027a48;
-  --warn: #b54708;
-  --error: #b42318;
-  --save: #027a48;
-  --save-2: #046c43;
-  --create-blue: #0a66c2;
-  --create-blue-2: #0956a4;
-  --row-hover: #f2fbf8;
-  --calendar-bg: #fcfffe;
-  --calendar-today-bg: linear-gradient(180deg, #f3fffc 0%, #fcfffe 100%);
-  --overlay-bg: rgba(14, 30, 33, 0.3);
-  --chip-bg: #eef4f4;
-  --chip-text: #1f3734;
-  --chip-owed-bg: #fff4e8;
-  --chip-owed-text: #8f480f;
-  --chip-paid-bg: #e8f7ee;
-  --chip-paid-text: #046339;
-  --kpi-ok-bg: #f0faf4;
-  --kpi-ok-border: #b8e6c8;
-  --kpi-warn-bg: #fffaf2;
-  --kpi-warn-border: #f5d5a8;
-  --drawer-shadow: rgba(11, 68, 64, 0.18);
-}
-
-/* ── Light-Blue ── */
 [data-theme="light-blue"] {
   color-scheme: light;
   --bg: #f0f4fa;
@@ -67,6 +32,41 @@
   --kpi-warn-bg: #fffaf2;
   --kpi-warn-border: #f5d5a8;
   --drawer-shadow: rgba(10, 30, 80, 0.16);
+}
+
+/* ── Light-Green ── */
+[data-theme="light-green"] {
+  color-scheme: light;
+  --bg: #f2f8f7;
+  --surface: #ffffff;
+  --surface-2: #f5fbfa;
+  --text: #1c2d2b;
+  --muted: #5f7676;
+  --accent: #0f766e;
+  --accent-2: #0a5c74;
+  --border: #d7e5e2;
+  --ok: #027a48;
+  --warn: #b54708;
+  --error: #b42318;
+  --save: #027a48;
+  --save-2: #046c43;
+  --create-blue: #0a66c2;
+  --create-blue-2: #0956a4;
+  --row-hover: #f2fbf8;
+  --calendar-bg: #fcfffe;
+  --calendar-today-bg: linear-gradient(180deg, #f3fffc 0%, #fcfffe 100%);
+  --overlay-bg: rgba(14, 30, 33, 0.3);
+  --chip-bg: #eef4f4;
+  --chip-text: #1f3734;
+  --chip-owed-bg: #fff4e8;
+  --chip-owed-text: #8f480f;
+  --chip-paid-bg: #e8f7ee;
+  --chip-paid-text: #046339;
+  --kpi-ok-bg: #f0faf4;
+  --kpi-ok-border: #b8e6c8;
+  --kpi-warn-bg: #fffaf2;
+  --kpi-warn-border: #f5d5a8;
+  --drawer-shadow: rgba(11, 68, 64, 0.18);
 }
 
 /* ── Dark-Green ── */
@@ -167,6 +167,7 @@ h1, h2, h3, h4 { margin: 0; }
   width: 52px;
   height: 52px;
   flex-shrink: 0;
+  color: var(--accent);
 }
 
 .app-header-text { min-width: 0; }
@@ -947,4 +948,29 @@ button.action-delete:hover {
 .login-env-badge.login-env-production {
   background-color: #d4edda;
   color: #155724;
+}
+
+/* ── Password strength meter ── */
+.pwd-strength {
+  margin-top: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.pwd-strength-bar {
+  height: 100%;
+  border-radius: 2px;
+  width: 0;
+  transition: width .25s, background .25s;
+}
+.pwd-strength-bar[data-level="0"] { width: 0; }
+.pwd-strength-bar[data-level="1"] { width: 25%; background: var(--error); }
+.pwd-strength-bar[data-level="2"] { width: 50%; background: var(--warn); }
+.pwd-strength-bar[data-level="3"] { width: 75%; background: var(--accent); }
+.pwd-strength-bar[data-level="4"] { width: 100%; background: var(--ok); }
+.pwd-strength-label {
+  font-size: .72rem;
+  margin-top: 2px;
+  color: var(--muted);
 }
