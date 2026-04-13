@@ -110,7 +110,7 @@
   function startClock() {
     tickClock();
     if (clockInterval) clearInterval(clockInterval);
-    clockInterval = setInterval(tickClock, 1000);
+    clockInterval = setInterval(tickClock, 60000);
   }
 
   function stopClock() {
@@ -122,7 +122,7 @@
     if (!el) return;
     const now = new Date();
     const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     el.textContent = `${date}  ${time}`;
   }
 
