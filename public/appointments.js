@@ -241,7 +241,7 @@ function renderAppointmentsTable(rows) {
   appointmentsTableBody.innerHTML = '';
 
   if (!rows.length) {
-    const colCount = isAdmin ? 9 : 8;
+    const colCount = isAdmin ? 6 : 8;
     const tr = document.createElement('tr');
     tr.innerHTML = `<td colspan="${colCount}" class="small">No appointments found.</td>`;
     appointmentsTableBody.appendChild(tr);
@@ -269,9 +269,9 @@ function renderAppointmentsTable(rows) {
       </td>
       <td>${appointment.location} ${AppCommon.mapsLink(appointment.location)}</td>
       <td>${appointment.duration_minutes}m</td>
-      <td>${AppCommon.euroFromCents(appointment.fee_cents)}</td>
-      <td><span class="${appointment.wire_received ? 'status-paid' : 'status-owed'}">${appointment.wire_received ? 'PAID' : 'OWED'}</span></td>
-      <td>${appointment.payment_type || '-'}</td>
+      ${!isAdmin ? `<td>${AppCommon.euroFromCents(appointment.fee_cents)}</td>` : ''}
+      ${!isAdmin ? `<td><span class="${appointment.wire_received ? 'status-paid' : 'status-owed'}">${appointment.wire_received ? 'PAID' : 'OWED'}</span></td>` : ''}
+      ${!isAdmin ? `<td>${appointment.payment_type || '-'}</td>` : ''}
       ${isAdmin ? `<td>${appointment.therapist_name || '-'}</td>` : ''}
     `;
 
@@ -310,7 +310,7 @@ function renderAppointmentsTable(rows) {
     const actionWrap = document.createElement('div');
     actionWrap.style.cssText = 'display:flex;gap:4px;align-items:center';
 
-    if (!appointment.wire_received && new Date(appointment.appointment_date) <= new Date()) {
+    if (!isAdmin && !appointment.wire_received && new Date(appointment.appointment_date) <= new Date()) {
       const payBtn = document.createElement('button');
       payBtn.type = 'button';
       payBtn.className = 'outline tiny-btn';

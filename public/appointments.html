@@ -58,7 +58,7 @@
               <label for="filterClientId">Patient</label>
               <select id="filterClientId" name="clientId"></select>
             </div>
-            <div>
+            <div data-therapist-only>
               <label for="wireReceived">Payment</label>
               <select id="wireReceived" name="wireReceived">
                 <option value="">All</option>
@@ -66,7 +66,7 @@
                 <option value="0">Owed</option>
               </select>
             </div>
-            <div>
+            <div data-therapist-only>
               <label for="filterPaymentType">Payment Type</label>
               <select id="filterPaymentType" name="paymentType">
                 <option value="">All</option>
@@ -110,9 +110,9 @@
                   <th><button type="button" class="sort-btn" data-sort-key="full_name">Patient</button></th>
                   <th><button type="button" class="sort-btn" data-sort-key="location">Address</button></th>
                   <th><button type="button" class="sort-btn" data-sort-key="duration_minutes">Duration</button></th>
-                  <th><button type="button" class="sort-btn" data-sort-key="fee_cents">Fee</button></th>
-                  <th><button type="button" class="sort-btn" data-sort-key="wire_received">Status</button></th>
-                  <th><button type="button" class="sort-btn" data-sort-key="payment_type">Type</button></th>
+                  <th data-therapist-only><button type="button" class="sort-btn" data-sort-key="fee_cents">Fee</button></th>
+                  <th data-therapist-only><button type="button" class="sort-btn" data-sort-key="wire_received">Status</button></th>
+                  <th data-therapist-only><button type="button" class="sort-btn" data-sort-key="payment_type">Type</button></th>
                   <th id="therapist-col-head" class="hidden"><button type="button" class="sort-btn" data-sort-key="therapist_name">Therapist</button></th>
                   <th></th>
                 </tr>
@@ -151,11 +151,11 @@
               <label for="durationMinutes">Duration (minutes)</label>
               <input id="durationMinutes" name="durationMinutes" type="number" min="1" value="60" required />
             </div>
-            <div>
+            <div data-therapist-only>
               <label for="feeAmount">Fee (EUR)</label>
               <input id="feeAmount" name="feeAmount" type="number" min="0" step="0.01" required />
             </div>
-            <div>
+            <div data-therapist-only>
               <label for="paymentType">Payment Type</label>
               <select id="paymentType" name="paymentType">
                 <option value="">Not set</option>
@@ -169,7 +169,7 @@
               <label for="therapistId">Therapist</label>
               <select id="therapistId" name="therapistId"></select>
             </div>
-            <div>
+            <div data-therapist-only>
               <label for="wireReceivedEdit">Payment Received</label>
               <select id="wireReceivedEdit" name="wireReceivedEdit">
                 <option value="false">No</option>

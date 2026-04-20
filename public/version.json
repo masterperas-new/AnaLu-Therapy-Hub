@@ -5,7 +5,7 @@
     {
       "version": "2.4",
       "date": "2026-04-20",
-      "summary": "Patient NIF and insurance, therapist-scoped patient visibility, duplicate detection.",
+      "summary": "Patient NIF and insurance, therapist-scoped patient visibility, duplicate detection, admin financial data restriction.",
       "changes": [
         "Patient NIF (fiscal identification) field with mod-11 check digit validation (frontend + backend)",
         "Patient insurance management — CRUD for insurance name, policy number (max 35 chars), and provider",
@@ -15,7 +15,10 @@
         "Ownership enforcement on patient updates — therapists can only edit their own patients",
         "Duplicate patient detection for admins — warns on matching NIF or identical name across therapists",
         "Duplicate warning banner on Patient Registry with expandable details",
-        "NIF and insurance displayed in patient appointment history info card"
+        "NIF and insurance displayed in patient appointment history info card",
+        "Admins can no longer view financial data — fee amounts, paid/owed status, balances, and payment types are hidden",
+        "Payment filters and payment-related form fields hidden from admin in Appointment Management",
+        "Schedule calendar chips no longer show paid/owed colour coding for admins"
       ]
     },
     {

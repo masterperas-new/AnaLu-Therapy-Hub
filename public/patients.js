@@ -144,11 +144,12 @@ function renderPatientsTable() {
     const tr = document.createElement('tr');
     tr.className = 'appt-row';
     tr.tabIndex = 0;
+    const isAdmin = AppCommon.getUser()?.role === 'admin';
     tr.innerHTML = `
       <td>${client.full_name}</td>
       <td>${client.phone || '-'}</td>
       <td>${client.email || '-'}</td>
-      <td class="balance-cell" data-client-id="${client.id}"><span class="small">...</span></td>
+      ${!isAdmin ? `<td class="balance-cell" data-client-id="${client.id}"><span class="small">...</span></td>` : ''}
       <td>
         <div style="display:flex;gap:6px">
           <button type="button" class="outline tiny-btn edit-btn">Edit</button>
@@ -174,15 +175,17 @@ function renderPatientsTable() {
 
     patientsTableBody.appendChild(tr);
 
-    // async load balance
-    getOwedCents(client.id).then((owedCents) => {
-      const cell = tr.querySelector('.balance-cell');
-      if (owedCents > 0) {
-        cell.innerHTML = `<span class="status-owed">${AppCommon.euroFromCents(owedCents)} owed</span>`;
-      } else {
-        cell.innerHTML = '<span class="status-paid">Clear</span>';
-      }
-    });
+    // async load balance (therapists only)
+    if (!isAdmin) {
+      getOwedCents(client.id).then((owedCents) => {
+        const cell = tr.querySelector('.balance-cell');
+        if (owedCents > 0) {
+          cell.innerHTML = `<span class="status-owed">${AppCommon.euroFromCents(owedCents)} owed</span>`;
+        } else {
+          cell.innerHTML = '<span class="status-paid">Clear</span>';
+        }
+      });
+    }
   });
 }
 
@@ -535,11 +538,26 @@ function renderHistoryInfo() {
   const client = currentHistoryClient;
   const rows = allHistoryRows;
   const total = rows.length;
-  const totalFee = rows.reduce((s, r) => s + Number(r.fee_cents || 0), 0);
-  const paid = rows.filter((r) => r.wire_received).length;
-  const owed = total - paid;
-  const paidFee = rows.filter((r) => r.wire_received).reduce((s, r) => s + Number(r.fee_cents || 0), 0);
-  const owedFee = totalFee - paidFee;
+  const isAdmin = AppCommon.getUser()?.role === 'admin';
+
+  let kpisHtml = `
+      <div class="info-kpi"><span class="info-kpi-val">${total}</span><span class="info-kpi-lbl">Appointments</span></div>
+  `;
+
+  if (!isAdmin) {
+    const totalFee = rows.reduce((s, r) => s + Number(r.fee_cents || 0), 0);
+    const paid = rows.filter((r) => r.wire_received).length;
+    const owed = total - paid;
+    const paidFee = rows.filter((r) => r.wire_received).reduce((s, r) => s + Number(r.fee_cents || 0), 0);
+    const owedFee = totalFee - paidFee;
+    kpisHtml += `
+      <div class="info-kpi"><span class="info-kpi-val status-paid">${paid}</span><span class="info-kpi-lbl">Paid</span></div>
+      <div class="info-kpi"><span class="info-kpi-val status-owed">${owed}</span><span class="info-kpi-lbl">Owed</span></div>
+      <div class="info-kpi"><span class="info-kpi-val">${AppCommon.euroFromCents(totalFee)}</span><span class="info-kpi-lbl">Total</span></div>
+      <div class="info-kpi"><span class="info-kpi-val status-paid">${AppCommon.euroFromCents(paidFee)}</span><span class="info-kpi-lbl">Paid</span></div>
+      <div class="info-kpi"><span class="info-kpi-val status-owed">${AppCommon.euroFromCents(owedFee)}</span><span class="info-kpi-lbl">Owed</span></div>
+    `;
+  }
 
   historyInfo.innerHTML = `
     <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${client.phone || '—'}</span></div>
@@ -548,12 +566,7 @@ function renderHistoryInfo() {
     <div class="info-row"><span class="info-label">NIF</span><span class="info-value">${client.nif || '—'}</span></div>
     <div class="info-row"><span class="info-label">Condition</span><span class="info-value">${client.condition_notes || '—'}</span></div>
     <div class="info-kpis">
-      <div class="info-kpi"><span class="info-kpi-val">${total}</span><span class="info-kpi-lbl">Appointments</span></div>
-      <div class="info-kpi"><span class="info-kpi-val status-paid">${paid}</span><span class="info-kpi-lbl">Paid</span></div>
-      <div class="info-kpi"><span class="info-kpi-val status-owed">${owed}</span><span class="info-kpi-lbl">Owed</span></div>
-      <div class="info-kpi"><span class="info-kpi-val">${AppCommon.euroFromCents(totalFee)}</span><span class="info-kpi-lbl">Total</span></div>
-      <div class="info-kpi"><span class="info-kpi-val status-paid">${AppCommon.euroFromCents(paidFee)}</span><span class="info-kpi-lbl">Paid</span></div>
-      <div class="info-kpi"><span class="info-kpi-val status-owed">${AppCommon.euroFromCents(owedFee)}</span><span class="info-kpi-lbl">Owed</span></div>
+      ${kpisHtml}
     </div>
   `;
 }
@@ -577,6 +590,7 @@ function renderHistoryTable(filter) {
 
   rows.forEach((row) => {
     const tr = document.createElement('tr');
+    const isAdmin = AppCommon.getUser()?.role === 'admin';
     const statusClass = row.wire_received ? 'status-paid' : 'status-owed';
     const statusLabel = row.wire_received ? 'PAID' : 'OWED';
     const payType = row.payment_type ? ` (${row.payment_type})` : '';
@@ -584,8 +598,8 @@ function renderHistoryTable(filter) {
       <td>${new Date(row.appointment_date).toLocaleString('en-GB')}</td>
       <td class="small">${row.location} ${AppCommon.mapsLink(row.location)}</td>
       <td>${row.duration_minutes}m</td>
-      <td>${AppCommon.euroFromCents(row.fee_cents)}</td>
-      <td><span class="${statusClass}">${statusLabel}${payType}</span></td>
+      ${!isAdmin ? `<td>${AppCommon.euroFromCents(row.fee_cents)}</td>` : ''}
+      ${!isAdmin ? `<td><span class="${statusClass}">${statusLabel}${payType}</span></td>` : ''}
       <td></td>
     `;
 
@@ -593,7 +607,7 @@ function renderHistoryTable(filter) {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
 
-    if (!row.wire_received && new Date(row.appointment_date) <= new Date()) {
+    if (!isAdmin && !row.wire_received && new Date(row.appointment_date) <= new Date()) {
       const payBtn = document.createElement('button');
       payBtn.type = 'button';
       payBtn.className = 'outline tiny-btn';

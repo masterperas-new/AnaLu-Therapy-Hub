@@ -177,7 +177,8 @@ function renderCalendar() {
 
       (grouped.get(dayKey(date)) || []).slice(0, 4).forEach((appointment) => {
         const link = document.createElement('a');
-        link.className = `appt-chip ${appointment.wire_received ? 'paid' : 'owed'}`;
+        const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
+        link.className = `appt-chip ${chipClass}`;
         link.href = `/appointments.html?id=${appointment.id}`;
         link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
         cell.appendChild(link);
@@ -214,7 +215,8 @@ function renderCalendar() {
     } else {
       events.forEach((appointment) => {
         const link = document.createElement('a');
-        link.className = `appt-chip ${appointment.wire_received ? 'paid' : 'owed'}`;
+        const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
+        link.className = `appt-chip ${chipClass}`;
         link.href = `/appointments.html?id=${appointment.id}`;
         link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
         cell.appendChild(link);
