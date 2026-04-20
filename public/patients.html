@@ -47,6 +47,15 @@
       </section>
 
       <section id="app-content" class="hidden stack">
+        <!-- Duplicate warning banner (admin only) -->
+        <div id="duplicates-banner" class="hidden" style="background:var(--warning-bg,#fff3cd);border:1px solid var(--warning-border,#ffc107);border-radius:6px;padding:10px 14px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <strong style="color:var(--warning-text,#856404)">⚠ Possible Duplicate Patients</strong>
+            <button type="button" id="toggle-duplicates" class="outline" style="font-size:0.75rem;padding:2px 8px">Details</button>
+          </div>
+          <div id="duplicates-details" class="hidden" style="margin-top:8px;font-size:0.85rem"></div>
+        </div>
+
         <section class="card">
           <div class="results-header">
             <h2>Patients <span id="patient-filter-summary" class="filter-summary"></span></h2>
@@ -104,6 +113,11 @@
               <label for="email">Email</label>
               <input id="email" name="email" type="email" />
             </div>
+            <div>
+              <label for="nif">NIF</label>
+              <input id="nif" name="nif" type="text" maxlength="9" pattern="\d{9}" placeholder="123456789" />
+              <small id="nif-error" class="field-error hidden" style="color:var(--danger,#c00);font-size:0.75rem">Invalid NIF check digit</small>
+            </div>
             <div style="grid-column: 1 / -1;">
               <label for="patientAddress">Address</label>
               <input id="patientAddress" name="patientAddress" type="text" placeholder="Street, City" />
@@ -116,6 +130,56 @@
               <button type="submit" class="action-save">Save Patient</button>
             </div>
           </form>
+
+          <!-- Insurance section (visible only when editing) -->
+          <div id="insurance-section" class="hidden" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+            <div class="results-header">
+              <h3>Insurances</h3>
+              <button type="button" id="new-insurance-btn" class="action-create-blue" style="font-size:0.78rem;padding:4px 10px">+ Add Insurance</button>
+            </div>
+            <div id="insurance-form-wrap" class="hidden" style="margin-bottom:8px">
+              <form id="insurance-form" class="grid-2">
+                <input id="insuranceId" type="hidden" />
+                <div>
+                  <label for="insuranceName">Insurance Name</label>
+                  <input id="insuranceName" name="insuranceName" type="text" required />
+                </div>
+                <div>
+                  <label for="providerName">Provider</label>
+                  <select id="providerName" name="providerName" required>
+                    <option value="">Select provider…</option>
+                    <option value="ADSE">ADSE</option>
+                    <option value="other">Other…</option>
+                  </select>
+                </div>
+                <div id="custom-provider-wrap" class="hidden">
+                  <label for="customProvider">Provider Name</label>
+                  <input id="customProvider" name="customProvider" type="text" />
+                </div>
+                <div>
+                  <label for="policyNumber">Policy Number</label>
+                  <input id="policyNumber" name="policyNumber" type="text" maxlength="35" />
+                </div>
+                <div style="grid-column: 1 / -1; display:flex; gap:8px">
+                  <button type="submit" class="action-save" style="font-size:0.78rem;padding:4px 10px">Save Insurance</button>
+                  <button type="button" id="cancel-insurance" class="outline" style="font-size:0.78rem;padding:4px 10px">Cancel</button>
+                </div>
+              </form>
+            </div>
+            <div class="table-wrap">
+              <table class="appt-table" style="min-width:auto">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Provider</th>
+                    <th>Policy #</th>
+                    <th style="width:100px"></th>
+                  </tr>
+                </thead>
+                <tbody id="insurances-table-body"></tbody>
+              </table>
+            </div>
+          </div>
 
           <!-- Comments section (visible only when editing) -->
           <div id="comments-section" class="hidden" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">

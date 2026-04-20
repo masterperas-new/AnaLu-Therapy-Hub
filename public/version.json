@@ -1,16 +1,34 @@
 {
-  "version": "2.3",
-  "releaseDate": "2026-04-10",
+  "version": "2.4",
+  "releaseDate": "2026-04-20",
   "history": [
     {
+      "version": "2.4",
+      "date": "2026-04-20",
+      "summary": "Patient NIF and insurance, therapist-scoped patient visibility, duplicate detection.",
+      "changes": [
+        "Patient NIF (fiscal identification) field with mod-11 check digit validation (frontend + backend)",
+        "Patient insurance management — CRUD for insurance name, policy number (max 35 chars), and provider",
+        "Insurance provider selector with ADSE preset and free-text option for other providers",
+        "Patient visibility restricted by therapist — each therapist only sees patients they registered",
+        "Admins see all patients across all therapists",
+        "Ownership enforcement on patient updates — therapists can only edit their own patients",
+        "Duplicate patient detection for admins — warns on matching NIF or identical name across therapists",
+        "Duplicate warning banner on Patient Registry with expandable details",
+        "NIF and insurance displayed in patient appointment history info card"
+      ]
+    },
+    {
       "version": "2.3",
-      "date": "2026-04-10",
-      "summary": "Password strength meter, theme-aware logo and login, session cookie fix.",
+      "date": "2026-04-20",
+      "summary": "Password strength meter, theme-aware logo and login, session cookie fix, better-sqlite3 migration.",
       "changes": [
         "Password strength indicator on all password fields (new user, edit user, profile)",
         "SVG logo uses currentColor — follows the active theme colour",
         "Default CSS theme is now light-blue; login screen no longer appears green",
-        "Session cookie uses secure:auto — works on both HTTP (Docker) and HTTPS (Vercel)"
+        "Session cookie uses secure:auto — works on both HTTP (Docker) and HTTPS (Vercel)",
+        "Replaced sqlite3 with better-sqlite3 — prebuilt binaries, no native compilation needed",
+        "Clock display simplified — removed seconds, updates every 60s"
       ]
     },
     {

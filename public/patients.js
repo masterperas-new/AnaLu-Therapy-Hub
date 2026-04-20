@@ -17,6 +17,18 @@ const commentForm = document.getElementById('comment-form');
 const newCommentBtn = document.getElementById('new-comment-btn');
 const cancelCommentBtn = document.getElementById('cancel-comment');
 
+const insuranceSection = document.getElementById('insurance-section');
+const insurancesTableBody = document.getElementById('insurances-table-body');
+const insuranceFormWrap = document.getElementById('insurance-form-wrap');
+const insuranceForm = document.getElementById('insurance-form');
+const newInsuranceBtn = document.getElementById('new-insurance-btn');
+const cancelInsuranceBtn = document.getElementById('cancel-insurance');
+const providerSelect = document.getElementById('providerName');
+const customProviderWrap = document.getElementById('custom-provider-wrap');
+const customProviderInput = document.getElementById('customProvider');
+const nifInput = document.getElementById('nif');
+const nifError = document.getElementById('nif-error');
+
 const historyOverlay = document.getElementById('history-overlay');
 const historyDrawer = document.getElementById('history-drawer');
 const historyTitle = document.getElementById('history-title');
@@ -40,6 +52,28 @@ let currentHistoryClientId = null;
 let currentHistoryClient = null;
 let allHistoryRows = [];
 let allComments = [];
+let allInsurances = [];
+
+/* ---- NIF validation ---- */
+function isValidNIF(nif) {
+  if (!nif) return true;
+  const cleaned = nif.replace(/\s/g, '');
+  if (!/^\d{9}$/.test(cleaned)) return false;
+  const d = cleaned.split('').map(Number);
+  const sum = d[0]*9 + d[1]*8 + d[2]*7 + d[3]*6 + d[4]*5 + d[5]*4 + d[6]*3 + d[7]*2;
+  let remainder = 11 - (sum % 11);
+  if (remainder >= 10) remainder = 0;
+  return remainder === d[8];
+}
+
+nifInput.addEventListener('input', () => {
+  const val = nifInput.value.trim();
+  if (val && val.length === 9 && !isValidNIF(val)) {
+    nifError.classList.remove('hidden');
+  } else {
+    nifError.classList.add('hidden');
+  }
+});
 
 /* ---- drawer helpers ---- */
 function openDrawer(overlay, drawer) {
@@ -158,6 +192,8 @@ function clearPatientForm() {
   document.getElementById('editClientId').value = '';
   currentEditClientId = null;
   commentsSection.classList.add('hidden');
+  insuranceSection.classList.add('hidden');
+  nifError.classList.add('hidden');
 }
 
 function openEditPatient(client) {
@@ -167,11 +203,15 @@ function openEditPatient(client) {
   document.getElementById('phone').value = client.phone || '';
   document.getElementById('email').value = client.email || '';
   document.getElementById('patientAddress').value = client.address || '';
+  document.getElementById('nif').value = client.nif || '';
   document.getElementById('conditionNotes').value = client.condition_notes;
+  nifError.classList.add('hidden');
   patientEditorTitle.textContent = 'Edit Patient';
   commentsSection.classList.remove('hidden');
+  insuranceSection.classList.remove('hidden');
   openDrawer(patientEditorOverlay, patientEditorDrawer);
   loadComments(client.id);
+  loadInsurances(client.id);
 }
 
 newPatientBtn.addEventListener('click', () => {
@@ -192,7 +232,13 @@ clientForm.addEventListener('submit', async (event) => {
     phone: document.getElementById('phone').value,
     email: document.getElementById('email').value,
     address: document.getElementById('patientAddress').value,
+    nif: document.getElementById('nif').value.trim(),
   };
+
+  if (payload.nif && !isValidNIF(payload.nif)) {
+    AppCommon.setMessage('Invalid NIF. Please check the number.', true);
+    return;
+  }
 
   try {
     if (id) {
@@ -326,6 +372,146 @@ commentForm.addEventListener('submit', async (event) => {
   }
 });
 
+/* ---- insurance section (inside editor drawer) ---- */
+async function loadInsurances(clientId) {
+  allInsurances = await AppCommon.api(`/ALTApi/clients/${clientId}/insurances`);
+  insuranceFormWrap.classList.add('hidden');
+  renderInsurancesTable();
+}
+
+function renderInsurancesTable() {
+  insurancesTableBody.innerHTML = '';
+
+  if (!allInsurances.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="4" class="small">No insurances registered.</td>';
+    insurancesTableBody.appendChild(tr);
+    return;
+  }
+
+  const clientId = currentEditClientId;
+  allInsurances.forEach((row) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.insurance_name}</td>
+      <td>${row.provider_name}</td>
+      <td>${row.policy_number || '—'}</td>
+      <td></td>
+    `;
+
+    const actionsCell = tr.querySelector('td:last-child');
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;gap:4px';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'outline tiny-btn';
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', () => {
+      document.getElementById('insuranceId').value = String(row.id);
+      document.getElementById('insuranceName').value = row.insurance_name;
+      document.getElementById('policyNumber').value = row.policy_number || '';
+      // Set provider dropdown
+      const knownProviders = ['ADSE'];
+      if (knownProviders.includes(row.provider_name)) {
+        providerSelect.value = row.provider_name;
+        customProviderWrap.classList.add('hidden');
+        customProviderInput.value = '';
+      } else {
+        providerSelect.value = 'other';
+        customProviderWrap.classList.remove('hidden');
+        customProviderInput.value = row.provider_name;
+      }
+      insuranceFormWrap.classList.remove('hidden');
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'outline tiny-btn action-delete';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', async () => {
+      if (!window.confirm('Delete this insurance?')) return;
+      try {
+        await AppCommon.api(`/ALTApi/clients/${clientId}/insurances/${row.id}`, { method: 'DELETE' });
+        AppCommon.setMessage('Insurance deleted.');
+        await loadInsurances(clientId);
+      } catch (err) {
+        AppCommon.setMessage(err.message, true);
+      }
+    });
+
+    wrap.appendChild(editBtn);
+    wrap.appendChild(delBtn);
+    actionsCell.appendChild(wrap);
+    insurancesTableBody.appendChild(tr);
+  });
+}
+
+providerSelect.addEventListener('change', () => {
+  if (providerSelect.value === 'other') {
+    customProviderWrap.classList.remove('hidden');
+    customProviderInput.required = true;
+  } else {
+    customProviderWrap.classList.add('hidden');
+    customProviderInput.required = false;
+    customProviderInput.value = '';
+  }
+});
+
+newInsuranceBtn.addEventListener('click', () => {
+  insuranceForm.reset();
+  document.getElementById('insuranceId').value = '';
+  customProviderWrap.classList.add('hidden');
+  customProviderInput.required = false;
+  insuranceFormWrap.classList.remove('hidden');
+});
+
+cancelInsuranceBtn.addEventListener('click', () => {
+  insuranceFormWrap.classList.add('hidden');
+});
+
+insuranceForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const clientId = currentEditClientId;
+  if (!clientId) return;
+
+  const iId = document.getElementById('insuranceId').value;
+  const providerValue = providerSelect.value === 'other'
+    ? customProviderInput.value.trim()
+    : providerSelect.value;
+
+  if (!providerValue) {
+    AppCommon.setMessage('Please enter a provider name.', true);
+    return;
+  }
+
+  const payload = {
+    insuranceName: document.getElementById('insuranceName').value.trim(),
+    policyNumber: document.getElementById('policyNumber').value.trim(),
+    providerName: providerValue,
+  };
+
+  try {
+    if (iId) {
+      await AppCommon.api(`/ALTApi/clients/${clientId}/insurances/${iId}`, {
+        method: 'PUT', body: JSON.stringify(payload),
+      });
+      AppCommon.setMessage('Insurance updated.');
+    } else {
+      await AppCommon.api(`/ALTApi/clients/${clientId}/insurances`, {
+        method: 'POST', body: JSON.stringify(payload),
+      });
+      AppCommon.setMessage('Insurance added.');
+    }
+    insuranceForm.reset();
+    insuranceFormWrap.classList.add('hidden');
+    customProviderWrap.classList.add('hidden');
+    await loadInsurances(clientId);
+  } catch (error) {
+    AppCommon.setMessage(error.message, true);
+  }
+});
+
 /* ---- appointments drawer ---- */
 async function openPatientDetails(client) {
   currentHistoryClientId = client.id;
@@ -359,6 +545,7 @@ function renderHistoryInfo() {
     <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${client.phone || '—'}</span></div>
     <div class="info-row"><span class="info-label">Email</span><span class="info-value">${client.email || '—'}</span></div>
     <div class="info-row"><span class="info-label">Address</span><span class="info-value">${client.address ? `${client.address} ${AppCommon.mapsLink(client.address)}` : '—'}</span></div>
+    <div class="info-row"><span class="info-label">NIF</span><span class="info-value">${client.nif || '—'}</span></div>
     <div class="info-row"><span class="info-label">Condition</span><span class="info-value">${client.condition_notes || '—'}</span></div>
     <div class="info-kpis">
       <div class="info-kpi"><span class="info-kpi-val">${total}</span><span class="info-kpi-lbl">Appointments</span></div>
@@ -481,7 +668,55 @@ pagerNext.addEventListener('click', () => {
   if (currentPage < totalPages) { currentPage += 1; renderPatientsTable(); }
 });
 
+/* ---- duplicate detection (admin only) ---- */
+async function checkDuplicates() {
+  const banner = document.getElementById('duplicates-banner');
+  const details = document.getElementById('duplicates-details');
+  const toggleBtn = document.getElementById('toggle-duplicates');
+  if (!banner) return;
+
+  try {
+    const data = await AppCommon.api('/ALTApi/clients/duplicates');
+    const nifDups = data.nifDuplicates || [];
+    const nameDups = data.nameDuplicates || [];
+
+    if (nifDups.length === 0 && nameDups.length === 0) {
+      banner.classList.add('hidden');
+      return;
+    }
+
+    banner.classList.remove('hidden');
+
+    let html = '';
+    if (nifDups.length) {
+      html += '<div style="margin-bottom:6px"><strong>Same NIF:</strong></div><ul style="margin:0 0 8px 16px;padding:0">';
+      nifDups.forEach(d => {
+        html += `<li>"${d.name1}" (${d.therapist1 || 'unassigned'}) and "${d.name2}" (${d.therapist2 || 'unassigned'}) — NIF ${d.nif}</li>`;
+      });
+      html += '</ul>';
+    }
+    if (nameDups.length) {
+      html += '<div style="margin-bottom:6px"><strong>Same Name:</strong></div><ul style="margin:0 0 0 16px;padding:0">';
+      nameDups.forEach(d => {
+        const nifInfo = d.nif1 || d.nif2 ? ` (NIF: ${d.nif1 || '—'} / ${d.nif2 || '—'})` : '';
+        html += `<li>"${d.name1}" (${d.therapist1 || 'unassigned'}) and "${d.name2}" (${d.therapist2 || 'unassigned'})${nifInfo}</li>`;
+      });
+      html += '</ul>';
+    }
+    details.innerHTML = html;
+
+    toggleBtn.addEventListener('click', () => {
+      details.classList.toggle('hidden');
+      toggleBtn.textContent = details.classList.contains('hidden') ? 'Details' : 'Hide';
+    });
+  } catch (_) {
+    // Not admin or endpoint error — hide banner
+    banner.classList.add('hidden');
+  }
+}
+
 /* ---- init ---- */
 AppCommon.ensureAuth(async () => {
   await loadClients();
+  checkDuplicates();
 });

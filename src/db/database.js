@@ -119,50 +119,34 @@ async function initializeDatabase() {
 
   // Use SQLite if no DATABASE_URL or PostgreSQL failed
   if (!isPostgres) {
-    const sqlite3 = require('sqlite3').verbose();
+    const Database = require('better-sqlite3');
     const path = require('path');
     const dbPath = path.join(__dirname, '..', '..', 'data', 'app.db');
-    const sqlite = new sqlite3.Database(dbPath);
+    const sqlite = new Database(dbPath);
+    sqlite.pragma('journal_mode = WAL');
 
     db = {
       async get(sql, params = []) {
-        return new Promise((resolve, reject) => {
-          const convertedSql = sql.replace(/\$\d+/g, '?');
-          sqlite.get(convertedSql, params, (err, row) => {
-            if (err) reject(err);
-            else resolve(row || null);
-          });
-        });
+        const convertedSql = sql.replace(/\$\d+/g, '?');
+        const row = sqlite.prepare(convertedSql).get(...params);
+        return row || null;
       },
       async all(sql, params = []) {
-        return new Promise((resolve, reject) => {
-          const convertedSql = sql.replace(/\$\d+/g, '?');
-          sqlite.all(convertedSql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows || []);
-          });
-        });
+        const convertedSql = sql.replace(/\$\d+/g, '?');
+        const rows = sqlite.prepare(convertedSql).all(...params);
+        return rows || [];
       },
       async run(sql, params = []) {
-        return new Promise((resolve, reject) => {
-          const convertedSql = sql.replace(/\$\d+/g, '?');
-          sqlite.run(convertedSql, params, function (err) {
-            if (err) reject(err);
-            else resolve({ lastID: this.lastID, changes: this.changes });
-          });
-        });
+        const convertedSql = sql.replace(/\$\d+/g, '?');
+        const result = sqlite.prepare(convertedSql).run(...params);
+        return { lastID: result.lastInsertRowid, changes: result.changes };
       },
       async close() {
-        return new Promise((resolve, reject) => {
-          sqlite.close((err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
+        sqlite.close();
       },
     };
 
-    console.log('[SQLite] Using SQLite database (DEVELOPMENT/FALLBACK)');
+    console.log('[SQLite] Using better-sqlite3 database (DEVELOPMENT/FALLBACK)');
   }
 
   await initializeDatabaseSchema();
@@ -223,9 +207,26 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           email TEXT,
           address TEXT,
-          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+          nif TEXT,
+          created_by INTEGER,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
       `);
+
+      // Add nif column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE clients ADD COLUMN nif TEXT`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
+
+      // Add created_by column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE clients ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Create appointments table
       await db.run(`
@@ -275,6 +276,19 @@ async function initializeDatabaseSchema() {
           client_id INTEGER NOT NULL,
           comment_date TEXT NOT NULL,
           body TEXT NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create patient_insurances table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS patient_insurances (
+          id SERIAL PRIMARY KEY,
+          client_id INTEGER NOT NULL,
+          insurance_name TEXT NOT NULL,
+          policy_number TEXT,
+          provider_name TEXT NOT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
         )
@@ -332,9 +346,26 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           email TEXT,
           address TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          nif TEXT,
+          created_by INTEGER,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
       `);
+
+      // Add nif column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE clients ADD COLUMN nif TEXT`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
+
+      // Add created_by column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE clients ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       await db.run(`
         CREATE TABLE IF NOT EXISTS appointments (
@@ -379,6 +410,19 @@ async function initializeDatabaseSchema() {
           client_id INTEGER NOT NULL,
           comment_date TEXT NOT NULL,
           body TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create patient_insurances table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS patient_insurances (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          client_id INTEGER NOT NULL,
+          insurance_name TEXT NOT NULL,
+          policy_number TEXT,
+          provider_name TEXT NOT NULL,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
         )
