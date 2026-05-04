@@ -324,6 +324,156 @@
     });
   }
 
+  /**
+   * Replace a <select> with a searchable dropdown.
+   * items: [{ id, label, detail? }]  — detail is optional secondary text
+   * Returns { setValue(id), getValue(), setItems(items) }
+   */
+  function createSearchSelect(selectEl, items, { placeholder = 'Search…', onChange } = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'search-select';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'search-select-input';
+    input.placeholder = placeholder;
+    input.autocomplete = 'off';
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'search-select-dropdown';
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(dropdown);
+    selectEl.style.display = 'none';
+    selectEl.parentNode.insertBefore(wrapper, selectEl.nextSibling);
+
+    let currentItems = items || [];
+    let selectedId = '';
+    let highlightIdx = -1;
+
+    function renderDropdown(filter) {
+      dropdown.innerHTML = '';
+      highlightIdx = -1;
+      const q = (filter || '').toLowerCase();
+      const filtered = currentItems.filter((it) => it.label.toLowerCase().includes(q));
+      if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.className = 'search-select-empty';
+        empty.textContent = 'No patients found';
+        dropdown.appendChild(empty);
+        return;
+      }
+      filtered.forEach((item, idx) => {
+        const opt = document.createElement('div');
+        opt.className = 'search-select-option';
+        opt.dataset.id = item.id;
+        const name = document.createElement('span');
+        name.className = 'ss-name';
+        name.textContent = item.label;
+        opt.appendChild(name);
+        if (item.detail) {
+          const det = document.createElement('span');
+          det.className = 'ss-detail';
+          det.textContent = item.detail;
+          opt.appendChild(det);
+        }
+        opt.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          pick(item);
+        });
+        dropdown.appendChild(opt);
+      });
+    }
+
+    function pick(item) {
+      selectedId = String(item.id);
+      selectEl.value = selectedId;
+      input.value = item.label;
+      wrapper.classList.remove('open');
+      selectEl.dispatchEvent(new Event('change'));
+      if (onChange) onChange(selectedId);
+    }
+
+    function open() {
+      renderDropdown(selectedId ? '' : input.value);
+      wrapper.classList.add('open');
+    }
+
+    input.addEventListener('focus', () => {
+      input.select();
+      open();
+    });
+
+    input.addEventListener('input', () => {
+      selectedId = '';
+      selectEl.value = '';
+      renderDropdown(input.value);
+      wrapper.classList.add('open');
+    });
+
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        wrapper.classList.remove('open');
+        if (selectedId) {
+          const item = currentItems.find((it) => String(it.id) === selectedId);
+          input.value = item ? item.label : '';
+        } else {
+          input.value = '';
+        }
+      }, 150);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      const opts = dropdown.querySelectorAll('.search-select-option');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightIdx = Math.min(highlightIdx + 1, opts.length - 1);
+        opts.forEach((o, i) => o.classList.toggle('highlighted', i === highlightIdx));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightIdx = Math.max(highlightIdx - 1, 0);
+        opts.forEach((o, i) => o.classList.toggle('highlighted', i === highlightIdx));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightIdx >= 0 && highlightIdx < opts.length) {
+          const id = opts[highlightIdx].dataset.id;
+          const item = currentItems.find((it) => String(it.id) === id);
+          if (item) pick(item);
+        }
+      } else if (e.key === 'Escape') {
+        wrapper.classList.remove('open');
+        input.blur();
+      }
+    });
+
+    function setValue(id) {
+      selectedId = id ? String(id) : '';
+      const item = currentItems.find((it) => String(it.id) === selectedId);
+      input.value = item ? item.label : '';
+      selectEl.value = selectedId;
+    }
+
+    function getValue() {
+      return selectedId;
+    }
+
+    function setItems(newItems) {
+      currentItems = newItems || [];
+      if (selectedId) {
+        const item = currentItems.find((it) => String(it.id) === selectedId);
+        input.value = item ? item.label : '';
+      }
+    }
+
+    function clear() {
+      selectedId = '';
+      input.value = '';
+      selectEl.value = '';
+    }
+
+    return { setValue, getValue, setItems, clear, input };
+  }
+
   window.AppCommon = {
     api,
     setMessage,
@@ -333,5 +483,6 @@
     getUser: () => currentUser,
     mapsLink,
     attachPasswordStrength,
+    createSearchSelect,
   };
 })();

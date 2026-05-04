@@ -160,6 +160,29 @@ router.patch('/:id/theme', async (req, res) => {
   }
 });
 
+/* Save calendar view preference */
+router.patch('/:id/calendar-view', async (req, res) => {
+  const { db } = require('../db/database');
+
+  const userId = Number(req.params.id);
+  if (req.session.user.id !== userId) {
+    return res.status(403).json({ error: 'You can only change your own calendar view.' });
+  }
+
+  const { calendarView } = req.body;
+  const allowed = ['week', 'month'];
+  const value = allowed.includes(calendarView) ? calendarView : 'week';
+
+  try {
+    await db.run('UPDATE users SET calendar_view = $1 WHERE id = $2', [value, userId]);
+    req.session.user.calendarView = value;
+    return res.json({ calendarView: value });
+  } catch (error) {
+    console.error('Calendar view save error:', error.message);
+    return res.status(500).json({ error: 'Failed to save calendar view.' });
+  }
+});
+
 /* Block / unblock user — admin only, cannot block self */
 router.patch('/:id/block', async (req, res) => {
   const { db } = require('../db/database');

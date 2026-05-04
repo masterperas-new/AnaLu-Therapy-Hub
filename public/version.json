@@ -1,7 +1,21 @@
 {
-  "version": "2.4",
-  "releaseDate": "2026-04-20",
+  "version": "2.5",
+  "releaseDate": "2026-05-04",
   "history": [
+    {
+      "version": "2.5",
+      "date": "2026-05-04",
+      "summary": "Sticky calendar view, mark as paid on creation, searchable patient selector sorted by last appointment.",
+      "changes": [
+        "Calendar view (Week/Month) remembers your choice — stays on your last selection when navigating away and coming back",
+        "Your calendar view preference is saved for next time you log in",
+        "You can now mark an appointment as paid right when you create it",
+        "Payment option is now visible for all users when creating or editing appointments",
+        "Type to search for a patient by name when creating an appointment",
+        "Patient list sorted by most recent appointment — patients you saw recently appear at the top",
+        "Each patient shows when their last appointment was (e.g. Last: yesterday, Last: 3 days ago)"
+      ]
+    },
     {
       "version": "2.4",
       "date": "2026-04-20",

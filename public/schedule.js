@@ -89,11 +89,32 @@ function parseFeeAmount(value) {
   return amount;
 }
 
+let clientSearchSelect = null;
+
+function lastApptLabel(date) {
+  if (!date) return 'No appointments yet';
+  const d = new Date(date);
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days === 0) return 'Last: today';
+  if (days === 1) return 'Last: yesterday';
+  if (days < 7) return `Last: ${days} days ago`;
+  if (days < 30) return `Last: ${Math.floor(days / 7)} week(s) ago`;
+  return `Last: ${d.toLocaleDateString('en-GB')}`;
+}
+
 async function loadClients() {
   const clients = await AppCommon.api('/ALTApi/clients');
   clientsById = new Map(clients.map((client) => [client.id, client]));
-  clientSelect.innerHTML = '';
 
+  // Sort by most recent appointment first, then by name
+  const sorted = [...clients].sort((a, b) => {
+    const aDate = a.last_appointment_date ? new Date(a.last_appointment_date).getTime() : 0;
+    const bDate = b.last_appointment_date ? new Date(b.last_appointment_date).getTime() : 0;
+    if (bDate !== aDate) return bDate - aDate;
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  clientSelect.innerHTML = '';
   const placeholder = document.createElement('option');
   placeholder.value = '';
   placeholder.textContent = 'Select a patient';
@@ -101,12 +122,26 @@ async function loadClients() {
   placeholder.disabled = true;
   clientSelect.appendChild(placeholder);
 
-  clients.forEach((client) => {
+  const items = sorted.map((client) => ({
+    id: client.id,
+    label: client.full_name,
+    detail: lastApptLabel(client.last_appointment_date),
+  }));
+
+  sorted.forEach((client) => {
     const option = document.createElement('option');
     option.value = String(client.id);
     option.textContent = client.full_name;
     clientSelect.appendChild(option);
   });
+
+  if (!clientSearchSelect) {
+    clientSearchSelect = AppCommon.createSearchSelect(clientSelect, items, {
+      placeholder: 'Search patient…',
+    });
+  } else {
+    clientSearchSelect.setItems(items);
+  }
 }
 
 // Preload address when patient selected
@@ -235,6 +270,14 @@ function renderCalendar() {
 
 calendarView.addEventListener('change', async () => {
   state.view = calendarView.value;
+  localStorage.setItem('calendarView', state.view);
+  const user = AppCommon.getUser();
+  if (user) {
+    AppCommon.api(`/ALTApi/users/${user.id}/calendar-view`, {
+      method: 'PATCH',
+      body: JSON.stringify({ calendarView: state.view }),
+    }).catch(() => {});
+  }
   await loadAppointments();
 });
 
@@ -285,6 +328,10 @@ appointmentForm.addEventListener('submit', async (event) => {
       payload.feeAmount = feeAmount;
     }
 
+    if (data.get('markAsPaid')) {
+      payload.wireReceived = true;
+    }
+
     await AppCommon.api('/ALTApi/appointments', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -293,6 +340,7 @@ appointmentForm.addEventListener('submit', async (event) => {
     appointmentForm.reset();
     document.getElementById('durationMinutes').value = '60';
     clientSelect.selectedIndex = 0;
+    if (clientSearchSelect) clientSearchSelect.clear();
     if (therapistSelect) therapistSelect.selectedIndex = 0;
     AppCommon.setMessage('Appointment created.');
     await loadAppointments();
@@ -302,7 +350,10 @@ appointmentForm.addEventListener('submit', async (event) => {
 });
 
 async function initPage() {
-  calendarView.value = 'week';
+  const user = AppCommon.getUser();
+  const savedView = localStorage.getItem('calendarView') || (user && user.calendarView) || 'week';
+  state.view = savedView;
+  calendarView.value = savedView;
   await Promise.all([loadClients(), loadSettings(), loadTherapists(), loadAppointments()]);
 }
 

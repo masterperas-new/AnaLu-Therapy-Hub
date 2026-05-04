@@ -14,6 +14,7 @@ router.get('/session', (req, res) => {
         fullName: req.session.user.fullName,
         phone: req.session.user.phone,
         theme: req.session.user.theme || null,
+        calendarView: req.session.user.calendarView || 'week',
       },
     });
   }
@@ -30,7 +31,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await db.get(
-      'SELECT id, username, password_hash, role, full_name, phone, blocked, theme FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, password_hash, role, full_name, phone, blocked, theme, calendar_view FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
 
@@ -53,6 +54,7 @@ router.post('/login', async (req, res) => {
       fullName: user.full_name,
       phone: user.phone,
       theme: user.theme || null,
+      calendarView: user.calendar_view || 'week',
     };
 
     req.session.save((err) => {

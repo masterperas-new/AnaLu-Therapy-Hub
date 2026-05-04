@@ -173,6 +173,7 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           blocked INTEGER NOT NULL DEFAULT 0,
           theme TEXT,
+          calendar_view TEXT DEFAULT 'week',
           last_login TIMESTAMP,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
@@ -181,6 +182,13 @@ async function initializeDatabaseSchema() {
       // Add last_login column if missing (migration for existing tables)
       try {
         await db.run(`ALTER TABLE users ADD COLUMN last_login TIMESTAMP`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
+
+      // Add calendar_view column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE users ADD COLUMN calendar_view TEXT DEFAULT 'week'`);
       } catch (_) {
         // Column already exists — ignore
       }
@@ -313,6 +321,7 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           blocked INTEGER NOT NULL DEFAULT 0,
           theme TEXT,
+          calendar_view TEXT DEFAULT 'week',
           last_login TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
@@ -321,6 +330,13 @@ async function initializeDatabaseSchema() {
       // Add last_login column if missing (migration for existing tables)
       try {
         await db.run(`ALTER TABLE users ADD COLUMN last_login TEXT`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
+
+      // Add calendar_view column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE users ADD COLUMN calendar_view TEXT DEFAULT 'week'`);
       } catch (_) {
         // Column already exists — ignore
       }

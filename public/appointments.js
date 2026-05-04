@@ -39,6 +39,18 @@ let currentRows = [];
 let sortState = { key: 'appointment_date', dir: 'desc' };
 let isAdmin = false;
 let therapists = [];
+let clientSearchSelect = null;
+
+function lastApptLabel(date) {
+  if (!date) return 'No appointments yet';
+  const d = new Date(date);
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days === 0) return 'Last: today';
+  if (days === 1) return 'Last: yesterday';
+  if (days < 7) return `Last: ${days} days ago`;
+  if (days < 30) return `Last: ${Math.floor(days / 7)} week(s) ago`;
+  return `Last: ${d.toLocaleDateString('en-GB')}`;
+}
 
 function dateToInputValue(isoString) {
   const d = new Date(isoString);
@@ -50,6 +62,7 @@ function clearForm() {
   appointmentForm.reset();
   document.getElementById('appointmentId').value = '';
   clientSelect.value = '';
+  if (clientSearchSelect) clientSearchSelect.clear();
   document.getElementById('durationMinutes').value = '60';
   feeInput.value = (defaultFeeCents / 100).toFixed(2);
   document.getElementById('wireReceivedEdit').disabled = false;
@@ -83,6 +96,14 @@ async function loadClients() {
   const clients = await AppCommon.api('/ALTApi/clients');
   clientsById = new Map(clients.map((client) => [client.id, client]));
 
+  // Sort by most recent appointment first, then by name
+  const sorted = [...clients].sort((a, b) => {
+    const aDate = a.last_appointment_date ? new Date(a.last_appointment_date).getTime() : 0;
+    const bDate = b.last_appointment_date ? new Date(b.last_appointment_date).getTime() : 0;
+    if (bDate !== aDate) return bDate - aDate;
+    return a.full_name.localeCompare(b.full_name);
+  });
+
   clientSelect.innerHTML = '';
   filterClientSelect.innerHTML = '<option value="">All patients</option>';
 
@@ -93,13 +114,27 @@ async function loadClients() {
   placeholder.selected = true;
   clientSelect.appendChild(placeholder);
 
-  clients.forEach((client) => {
+  const items = sorted.map((client) => ({
+    id: client.id,
+    label: client.full_name,
+    detail: lastApptLabel(client.last_appointment_date),
+  }));
+
+  sorted.forEach((client) => {
     const option = document.createElement('option');
     option.value = String(client.id);
     option.textContent = client.full_name;
     clientSelect.appendChild(option.cloneNode(true));
     filterClientSelect.appendChild(option);
   });
+
+  if (!clientSearchSelect) {
+    clientSearchSelect = AppCommon.createSearchSelect(clientSelect, items, {
+      placeholder: 'Search patient…',
+    });
+  } else {
+    clientSearchSelect.setItems(items);
+  }
 }
 // Preload address from selected patient
 clientSelect.addEventListener('change', () => {
@@ -393,6 +428,7 @@ async function loadAppointmentById(id) {
   const appointment = await AppCommon.api(`/ALTApi/appointments/${id}`);
   document.getElementById('appointmentId').value = String(appointment.id);
   document.getElementById('clientId').value = String(appointment.client_id);
+  if (clientSearchSelect) clientSearchSelect.setValue(appointment.client_id);
   document.getElementById('appointmentDate').value = dateToInputValue(appointment.appointment_date);
   document.getElementById('address').value = appointment.location;
   document.getElementById('durationMinutes').value = String(appointment.duration_minutes || 60);

@@ -24,12 +24,12 @@ router.get('/', async (req, res) => {
 
   // Non-admin users only see their own patients
   if (user.role !== 'admin') {
-    conditions.push(`created_by = $${paramIdx++}`);
+    conditions.push(`c.created_by = $${paramIdx++}`);
     params.push(user.id);
   }
 
   if (search) {
-    conditions.push(`(lower(full_name) LIKE lower($${paramIdx}) OR lower(condition_notes) LIKE lower($${paramIdx + 1}))`);
+    conditions.push(`(lower(c.full_name) LIKE lower($${paramIdx}) OR lower(c.condition_notes) LIKE lower($${paramIdx + 1}))`);
     params.push(`%${search}%`, `%${search}%`);
     paramIdx += 2;
   }
@@ -38,10 +38,13 @@ router.get('/', async (req, res) => {
 
   try {
     const rows = await db.all(
-      `SELECT id, full_name, condition_notes, phone, email, address, nif, created_by, created_at
-       FROM clients
+      `SELECT c.id, c.full_name, c.condition_notes, c.phone, c.email, c.address, c.nif, c.created_by, c.created_at,
+              MAX(a.appointment_date) AS last_appointment_date
+       FROM clients c
+       LEFT JOIN appointments a ON a.client_id = c.id
        ${whereSql}
-       ORDER BY full_name ASC`,
+       GROUP BY c.id
+       ORDER BY c.full_name ASC`,
       params
     );
     return res.json(rows);

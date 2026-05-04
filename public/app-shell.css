@@ -974,3 +974,63 @@ button.action-delete:hover {
   margin-top: 2px;
   color: var(--muted);
 }
+
+/* Searchable select */
+.search-select {
+  position: relative;
+}
+.search-select input.search-select-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+  font: inherit;
+  cursor: pointer;
+}
+.search-select input.search-select-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.search-select .search-select-dropdown {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  margin-top: -1px;
+}
+.search-select.open .search-select-dropdown {
+  display: block;
+}
+.search-select .search-select-option {
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.search-select .search-select-option:hover,
+.search-select .search-select-option.highlighted {
+  background: var(--surface-2);
+}
+.search-select .search-select-option .ss-name {
+  font-weight: 500;
+}
+.search-select .search-select-option .ss-detail {
+  font-size: .78rem;
+  color: var(--muted);
+}
+.search-select .search-select-empty {
+  padding: 10px;
+  font-size: .85rem;
+  color: var(--muted);
+  text-align: center;
+}
