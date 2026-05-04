@@ -100,7 +100,10 @@
         <section class="card">
           <div class="results-header">
             <h2>Appointments <span id="filter-summary" class="filter-summary"></span></h2>
-            <button type="button" id="new-appointment" class="action-create-blue">New Appointment</button>
+            <div style="display:flex;gap:8px">
+              <button type="button" id="bulk-add-appointment" class="outline">Bulk Add</button>
+              <button type="button" id="new-appointment" class="action-create-blue">New Appointment</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="appt-table">
@@ -183,6 +186,68 @@
             <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
               <button type="submit" class="action-save">Save Appointment</button>
               <button type="button" id="delete-appointment" class="outline action-delete">Delete Appointment</button>
+            </div>
+          </form>
+        </aside>
+
+        <div id="bulk-overlay" class="editor-overlay hidden"></div>
+        <aside id="bulk-drawer" class="editor-drawer hidden" aria-hidden="true">
+          <div class="editor-drawer-head">
+            <h2>Bulk Add Appointments</h2>
+            <button type="button" id="close-bulk" class="outline">Close</button>
+          </div>
+          <p class="small" style="margin-bottom:10px;color:var(--muted)">Create multiple appointments for the same patient at different dates.</p>
+          <form id="bulk-form" class="grid-2">
+            <div>
+              <label for="bulkClientId">Patient</label>
+              <select id="bulkClientId" required></select>
+            </div>
+            <div id="bulk-therapist-field-wrap" class="hidden">
+              <label for="bulkTherapistId">Therapist</label>
+              <select id="bulkTherapistId"></select>
+            </div>
+            <div>
+              <label for="bulkAddress">Address</label>
+              <input id="bulkAddress" type="text" required />
+            </div>
+            <div>
+              <label for="bulkDuration">Duration (minutes)</label>
+              <input id="bulkDuration" type="number" min="1" value="60" required />
+            </div>
+            <div data-therapist-only>
+              <label for="bulkFee">Fee (EUR)</label>
+              <input id="bulkFee" type="number" min="0" step="0.01" />
+            </div>
+            <div>
+              <label for="bulkComments">Comments</label>
+              <input id="bulkComments" type="text" />
+            </div>
+            <div data-therapist-only>
+              <label for="bulkPaymentType">Payment Type</label>
+              <select id="bulkPaymentType">
+                <option value="">Not set</option>
+                <option value="Cash">Cash</option>
+                <option value="MBWay">MBWay</option>
+                <option value="Card">Card</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+            </div>
+            <div data-therapist-only>
+              <label style="display:flex;align-items:center;gap:0.4rem;margin-top:1.6rem;font-weight:normal;cursor:pointer">
+                <input type="checkbox" id="bulkMarkAsPaid" />
+                Mark as Paid
+              </label>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label>Dates</label>
+              <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                <input id="bulkDateInput" type="datetime-local" style="flex:1;min-width:180px" />
+                <button type="button" id="bulkAddDate" class="outline" style="margin-top:0;white-space:nowrap">+ Add Date</button>
+              </div>
+              <div id="bulkDateChips" class="date-chips" style="margin-top:8px"></div>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="action-create" id="bulkSubmitBtn" disabled>Create 0 Appointments</button>
             </div>
           </form>
         </aside>

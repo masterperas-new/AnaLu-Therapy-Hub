@@ -1055,3 +1055,33 @@ button.action-delete:hover {
   color: var(--muted);
   text-align: center;
 }
+
+/* Date chips for bulk add */
+.date-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  font-size: .82rem;
+}
+.date-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  margin: 0;
+  font-size: .9rem;
+  color: var(--muted);
+  line-height: 1;
+}
+.date-chip-remove:hover {
+  color: var(--error);
+}

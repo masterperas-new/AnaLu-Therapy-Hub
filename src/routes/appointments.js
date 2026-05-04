@@ -284,6 +284,95 @@ router.post('/', async (req, res) => {
   }
 });
 
+/* Batch create — same patient/address/fee, multiple dates */
+router.post('/batch', async (req, res) => {
+  const { db } = require("../db/database");
+  try {
+    const {
+      clientId,
+      appointmentDates,
+      address,
+      feeAmount,
+      durationMinutes,
+      comments,
+      wireReceived,
+      paymentType,
+      userId,
+    } = req.body;
+    const user = req.session.user;
+
+    if (!clientId || !address || !address.trim()) {
+      return res.status(400).json({ error: 'Client and address are required.' });
+    }
+
+    if (!Array.isArray(appointmentDates) || appointmentDates.length === 0) {
+      return res.status(400).json({ error: 'At least one date is required.' });
+    }
+
+    if (appointmentDates.length > 52) {
+      return res.status(400).json({ error: 'Maximum 52 appointments at once.' });
+    }
+
+    const safeDuration = durationMinutes === undefined ? 60 : Number(durationMinutes);
+    if (Number.isNaN(safeDuration) || safeDuration <= 0) {
+      return res.status(400).json({ error: 'Duration must be a positive number of minutes.' });
+    }
+
+    const safePaymentType = paymentType || null;
+    const feeProvided = feeAmount !== undefined && feeAmount !== null && feeAmount !== '';
+
+    let assignedUserId;
+    if (user.role === 'admin') {
+      if (!userId) {
+        return res.status(400).json({ error: 'Admin must select a therapist for the appointment.' });
+      }
+      assignedUserId = Number(userId);
+      if (assignedUserId === user.id) {
+        return res.status(400).json({ error: 'Admin cannot be assigned appointments.' });
+      }
+    } else {
+      assignedUserId = user.id;
+    }
+
+    let feeCents;
+    if (feeProvided) {
+      feeCents = Math.round(Number(feeAmount) * 100);
+      if (Number.isNaN(feeCents) || feeCents < 0) {
+        return res.status(400).json({ error: 'Fee must be a non-negative number.' });
+      }
+    } else {
+      feeCents = await getDefaultFeeCents();
+    }
+
+    const sql = `
+      INSERT INTO appointments (
+        client_id, user_id, appointment_date, location, fee_cents,
+        duration_minutes, notes, comments, wire_received, wire_received_date, payment_type
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id
+    `;
+
+    const ids = [];
+    for (const dateStr of appointmentDates) {
+      const isFuture = new Date(dateStr) > new Date();
+      const paid = (wireReceived && !isFuture) ? 1 : 0;
+      const paidDate = paid ? new Date().toISOString() : null;
+
+      const result = await db.run(sql, [
+        Number(clientId), assignedUserId, dateStr, address.trim(), feeCents,
+        safeDuration, comments || null, comments || null, paid, paidDate, safePaymentType,
+      ]);
+      ids.push(result.id);
+    }
+
+    return res.status(201).json({ ids, count: ids.length });
+  } catch (err) {
+    console.error('Error batch creating appointments:', err);
+    return res.status(500).json({ error: 'Failed to create appointments.' });
+  }
+});
+
 router.put('/:id', async (req, res) => {
   const { db } = require("../db/database");
   try {

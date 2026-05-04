@@ -1,7 +1,20 @@
 {
-  "version": "2.6",
+  "version": "2.7",
   "releaseDate": "2026-05-04",
   "history": [
+    {
+      "version": "2.7",
+      "date": "2026-05-04",
+      "summary": "Bulk appointment creation, 'Add Another' quick flow, payment status on bulk add.",
+      "changes": [
+        "Bulk Add Appointments — create multiple appointments for the same patient at different dates in one go",
+        "Bulk Add available on both the Schedule Hub and Appointment Management pages",
+        "Pick dates one by one with chips — easy to add, remove, and review before creating",
+        "Set payment status (Mark as Paid + Payment Type) when bulk-creating appointments",
+        "'Add Another' button after creating a single appointment — keeps patient, address, fee and therapist so you can quickly add the next one",
+        "Searchable patient selector on bulk forms, sorted by most recent appointment"
+      ]
+    },
     {
       "version": "2.6",
       "date": "2026-05-04",
