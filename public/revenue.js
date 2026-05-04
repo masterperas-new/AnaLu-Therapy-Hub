@@ -13,19 +13,10 @@ const owedPagerInfo = document.getElementById('owed-pager-info');
 
 const futureLabel = document.getElementById('future-label');
 const futureKpis = document.getElementById('futureKpis');
-const futureSearch = document.getElementById('futureSearch');
-const futureTableBody = document.getElementById('future-table-body');
-const futureEmpty = document.getElementById('futureEmpty');
-const futurePager = document.getElementById('future-pager');
-const futurePagerPrev = document.getElementById('future-pager-prev');
-const futurePagerNext = document.getElementById('future-pager-next');
-const futurePagerInfo = document.getElementById('future-pager-info');
 
 const PAGE_SIZE = 5;
 let owedCurrentPage = 1;
 let allOwed = [];
-let futureCurrentPage = 1;
-let allFuture = [];
 let isAdmin = false;
 
 const therapistFilterWrap = document.getElementById('therapist-filter-wrap');
@@ -53,7 +44,7 @@ function renderKpis(target, report) {
       <span class="rev-kpi-label">Paid</span>
       <span class="rev-kpi-val">${report.paidAppointments}</span>
     </div>
-    <div class="rev-kpi rev-kpi--warn">
+    <div class="rev-kpi rev-kpi--warn rev-kpi--clickable" data-action="show-owed">
       <span class="rev-kpi-label">Owed</span>
       <span class="rev-kpi-val">${report.owedAppointments}</span>
     </div>
@@ -65,11 +56,15 @@ function renderKpis(target, report) {
       <span class="rev-kpi-label">Paid Revenue</span>
       <span class="rev-kpi-val">${AppCommon.euroFromCents(report.paidCents)}</span>
     </div>
-    <div class="rev-kpi rev-kpi--warn">
+    <div class="rev-kpi rev-kpi--warn rev-kpi--clickable" data-action="show-owed">
       <span class="rev-kpi-label">Owed Revenue</span>
       <span class="rev-kpi-val">${AppCommon.euroFromCents(report.owedCents)}</span>
     </div>
   `;
+
+  target.querySelectorAll('[data-action="show-owed"]').forEach((el) => {
+    el.addEventListener('click', openOwedDrawer);
+  });
 }
 
 function renderOwedTable(filter) {
@@ -169,6 +164,36 @@ owedPagerNext.addEventListener('click', () => {
   renderOwedTable(owedSearch.value);
 });
 
+const owedOverlay = document.getElementById('owed-overlay');
+const owedDrawer = document.getElementById('owed-drawer');
+const closeOwedBtn = document.getElementById('close-owed');
+
+function openOwedDrawer() {
+  owedSearch.value = '';
+  owedCurrentPage = 1;
+  renderOwedTable();
+  owedOverlay.classList.remove('hidden');
+  owedDrawer.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    owedOverlay.classList.add('open');
+    owedDrawer.classList.add('open');
+    owedDrawer.setAttribute('aria-hidden', 'false');
+  });
+}
+
+function closeOwedDrawer() {
+  owedOverlay.classList.remove('open');
+  owedDrawer.classList.remove('open');
+  owedDrawer.setAttribute('aria-hidden', 'true');
+  setTimeout(() => {
+    owedOverlay.classList.add('hidden');
+    owedDrawer.classList.add('hidden');
+  }, 220);
+}
+
+closeOwedBtn.addEventListener('click', closeOwedDrawer);
+owedOverlay.addEventListener('click', closeOwedDrawer);
+
 /* ── Future Revenue table ── */
 
 function renderFutureKpis(report) {
@@ -200,79 +225,6 @@ function renderFutureKpis(report) {
   `;
 }
 
-function renderFutureTable(filter) {
-  const term = (filter || '').toLowerCase();
-  const rows = allFuture.filter((a) => {
-    if (!term) return true;
-    const date = new Date(a.appointment_date).toLocaleDateString('en-GB');
-    return (
-      a.full_name.toLowerCase().includes(term) ||
-      date.includes(term) ||
-      (a.comments || '').toLowerCase().includes(term) ||
-      (a.notes || '').toLowerCase().includes(term)
-    );
-  });
-
-  futureTableBody.innerHTML = '';
-
-  if (!rows.length) {
-    futureEmpty.textContent = allFuture.length ? 'No matches.' : 'No upcoming appointments.';
-    futureEmpty.classList.remove('hidden');
-    futurePager.classList.add('hidden');
-    return;
-  }
-
-  futureEmpty.classList.add('hidden');
-
-  const totalPages = Math.ceil(rows.length / PAGE_SIZE);
-  if (futureCurrentPage > totalPages) futureCurrentPage = totalPages;
-  const startIdx = (futureCurrentPage - 1) * PAGE_SIZE;
-  const pageRows = rows.slice(startIdx, startIdx + PAGE_SIZE);
-
-  if (totalPages <= 1) {
-    futurePager.classList.add('hidden');
-  } else {
-    futurePager.classList.remove('hidden');
-    futurePagerPrev.disabled = futureCurrentPage <= 1;
-    futurePagerNext.disabled = futureCurrentPage >= totalPages;
-    futurePagerInfo.textContent = `Page ${futureCurrentPage} of ${totalPages}`;
-  }
-
-  pageRows.forEach((a) => {
-    const tr = document.createElement('tr');
-    const date = new Date(a.appointment_date).toLocaleDateString('en-GB');
-    const fee = AppCommon.euroFromCents(a.fee_cents);
-    const notes = a.comments || a.notes || '';
-    const status = a.wire_received
-      ? '<span style="color:var(--ok)">Pre-paid</span>'
-      : '<span style="color:var(--muted)">Pending</span>';
-
-    tr.innerHTML = `
-      <td>${a.full_name}</td>
-      <td>${date}</td>
-      <td>${fee}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${notes}</td>
-      <td>${status}</td>
-    `;
-    futureTableBody.appendChild(tr);
-  });
-}
-
-futureSearch.addEventListener('input', () => {
-  futureCurrentPage = 1;
-  renderFutureTable(futureSearch.value);
-});
-
-futurePagerPrev.addEventListener('click', () => {
-  futureCurrentPage -= 1;
-  renderFutureTable(futureSearch.value);
-});
-
-futurePagerNext.addEventListener('click', () => {
-  futureCurrentPage += 1;
-  renderFutureTable(futureSearch.value);
-});
-
 async function loadTotal() {
   const report = await AppCommon.api(`/ALTApi/reports/total${userIdSeparator()}`);
   renderKpis(totalKpis, report);
@@ -288,19 +240,9 @@ async function loadOwed() {
 }
 
 async function loadFuture() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const from = tomorrow.toISOString().slice(0, 10);
-  const [report, appointments] = await Promise.all([
-    AppCommon.api(`/ALTApi/reports/future${userIdSeparator()}`),
-    AppCommon.api(`/ALTApi/appointments?from=${from}${userIdParam()}`),
-  ]);
+  const report = await AppCommon.api(`/ALTApi/reports/future${userIdSeparator()}`);
   renderFutureKpis(report);
-  allFuture = appointments;
-  futureLabel.textContent = `Future Revenue (${allFuture.length})`;
-  futureSearch.value = '';
-  futureCurrentPage = 1;
-  renderFutureTable();
+  futureLabel.textContent = `Future Revenue (${report.totalAppointments})`;
 }
 
 async function loadMonth() {

@@ -31,14 +31,16 @@ router.get('/monthly', async (req, res) => {
       paramIndex++;
     }
 
+    const dateCompare = isPostgres ? "appointment_date::timestamp::date" : "date(appointment_date)";
+
     const sql = `
       SELECT
         COUNT(*) AS total_appointments,
         SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-        SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+        SUM(CASE WHEN wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
         COALESCE(SUM(fee_cents), 0) AS total_cents,
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-        COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
+        COALESCE(SUM(CASE WHEN wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
       WHERE ${isPostgres ? "to_char(appointment_date::timestamp, 'YYYY-MM')" : "strftime('%Y-%m', appointment_date)"} = $1 ${userFilter}
     `;
@@ -88,14 +90,16 @@ router.get('/yearly', async (req, res) => {
       paramIndex++;
     }
 
+    const dateCompare = isPostgres ? "appointment_date::timestamp::date" : "date(appointment_date)";
+
     const sql = `
       SELECT
         COUNT(*) AS total_appointments,
         SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-        SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+        SUM(CASE WHEN wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
         COALESCE(SUM(fee_cents), 0) AS total_cents,
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-        COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
+        COALESCE(SUM(CASE WHEN wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
       WHERE ${isPostgres ? "to_char(appointment_date::timestamp, 'YYYY')" : "strftime('%Y', appointment_date)"} = $1 ${userFilter}
     `;
@@ -119,7 +123,7 @@ router.get('/yearly', async (req, res) => {
 
 router.get('/total', async (req, res) => {
   
-  const { db } = require('../db/database');
+  const { db, isPostgres } = require('../db/database');
   try {
     const user = req.session.user;
     // Therapists only - admins cannot access revenue reports
@@ -139,14 +143,16 @@ router.get('/total', async (req, res) => {
       paramIndex++;
     }
 
+    const dateCompareTotal = isPostgres ? "appointment_date::timestamp::date" : "date(appointment_date)";
+
     const sql = `
       SELECT
         COUNT(*) AS total_appointments,
         SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
-        SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+        SUM(CASE WHEN wire_received = 0 AND ${dateCompareTotal} <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
         COALESCE(SUM(fee_cents), 0) AS total_cents,
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
-        COALESCE(SUM(CASE WHEN wire_received = 0 AND appointment_date::timestamp::date <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
+        COALESCE(SUM(CASE WHEN wire_received = 0 AND ${dateCompareTotal} <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents
       FROM appointments
       ${userFilter}
     `;
@@ -169,16 +175,11 @@ router.get('/total', async (req, res) => {
 
 router.get('/future', async (req, res) => {
   
-  const { db } = require('../db/database');
+  const { db, isPostgres } = require('../db/database');
   try {
     const user = req.session.user;
     // Therapists only - admins cannot access revenue reports
     if (req.session.user.role === 'admin') {
-      return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
-    }
-    
-    // Therapists only - admins cannot access revenue reports
-    if (user.role === 'admin') {
       return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
     }
     let userFilter = '';
@@ -194,6 +195,8 @@ router.get('/future', async (req, res) => {
       paramIndex++;
     }
 
+    const dateCompareFuture = isPostgres ? "appointment_date::timestamp::date" : "date(appointment_date)";
+
     const sql = `
       SELECT
         COUNT(*) AS total_appointments,
@@ -203,7 +206,7 @@ router.get('/future', async (req, res) => {
         COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
         COALESCE(SUM(CASE WHEN wire_received = 0 THEN fee_cents ELSE 0 END), 0) AS unpaid_cents
       FROM appointments
-      WHERE appointment_date::timestamp::date > CURRENT_DATE ${userFilter}
+      WHERE ${dateCompareFuture} > CURRENT_DATE ${userFilter}
     `;
 
     const row = await db.get(sql, params);

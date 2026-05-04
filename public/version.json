@@ -1,7 +1,19 @@
 {
-  "version": "2.5",
+  "version": "2.6",
   "releaseDate": "2026-05-04",
   "history": [
+    {
+      "version": "2.6",
+      "date": "2026-05-04",
+      "summary": "Revenue Control redesign, outstanding payments popup, future revenue fix.",
+      "changes": [
+        "Revenue Control page simplified — cleaner layout with KPI cards only",
+        "Outstanding Payments moved to a popup — click the Owed cards to view and manage unpaid appointments",
+        "Owed KPI cards show a visual hint (click to view) so you know they are interactive",
+        "Future Revenue section cleaned up — shows summary KPIs without the appointment list",
+        "Fixed revenue reports not loading on local/development database"
+      ]
+    },
     {
       "version": "2.5",
       "date": "2026-05-04",

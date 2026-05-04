@@ -423,6 +423,27 @@ button.action-delete:hover {
   color: var(--warn);
 }
 
+.rev-kpi--clickable {
+  cursor: pointer;
+  transition: transform .1s, box-shadow .1s;
+  position: relative;
+}
+.rev-kpi--clickable::after {
+  content: 'click to view ▸';
+  display: block;
+  font-size: .65rem;
+  color: var(--muted);
+  margin-top: 4px;
+  text-align: center;
+}
+.rev-kpi--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+}
+.rev-kpi--clickable:hover::after {
+  color: var(--warn);
+}
+
 .calendar-controls {
   margin-top: 12px;
   display: grid;

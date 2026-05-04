@@ -73,54 +73,39 @@
         <section class="card">
           <h3 id="future-label" style="margin-bottom:10px">Future Revenue</h3>
           <div id="futureKpis" class="revenue-kpis"></div>
-          <input id="futureSearch" type="text" placeholder="Search by name, date or notes…" style="margin-top:12px;margin-bottom:10px" />
-          <div style="overflow-x:auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Date</th>
-                  <th>Fee</th>
-                  <th>Notes</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="future-table-body"></tbody>
-            </table>
-          </div>
-          <p id="futureEmpty" class="hidden" style="color:var(--muted);font-size:0.9rem"></p>
-          <div id="future-pager" class="pager hidden">
-            <button type="button" id="future-pager-prev" class="outline pager-btn">&lsaquo; Prev</button>
-            <span id="future-pager-info" class="pager-info"></span>
-            <button type="button" id="future-pager-next" class="outline pager-btn">Next &rsaquo;</button>
-          </div>
         </section>
 
-        <section class="card">
-          <h3 id="owed-label" style="margin-bottom:10px">Outstanding Payments</h3>
-          <input id="owedSearch" type="text" placeholder="Search by name, date or notes…" style="margin-bottom:10px" />
-          <div style="overflow-x:auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Patient</th>
-                  <th>Date</th>
-                  <th>Fee</th>
-                  <th>Notes</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="owed-table-body"></tbody>
-            </table>
-          </div>
-          <p id="owedEmpty" class="hidden" style="color:var(--muted);font-size:0.9rem"></p>
-          <div id="owed-pager" class="pager hidden">
-            <button type="button" id="owed-pager-prev" class="outline pager-btn">&lsaquo; Prev</button>
-            <span id="owed-pager-info" class="pager-info"></span>
-            <button type="button" id="owed-pager-next" class="outline pager-btn">Next &rsaquo;</button>
-          </div>
-        </section>
       </section>
+
+      <!-- Outstanding Payments popup -->
+      <div id="owed-overlay" class="editor-overlay hidden"></div>
+      <aside id="owed-drawer" class="editor-drawer hidden" aria-hidden="true">
+        <div class="editor-drawer-head">
+          <h2 id="owed-label">Outstanding Payments</h2>
+          <button type="button" id="close-owed" class="outline">Close</button>
+        </div>
+        <input id="owedSearch" type="text" placeholder="Search by name, date or notes…" style="margin-bottom:10px" />
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Date</th>
+                <th>Fee</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="owed-table-body"></tbody>
+          </table>
+        </div>
+        <p id="owedEmpty" class="hidden" style="color:var(--muted);font-size:0.9rem"></p>
+        <div id="owed-pager" class="pager hidden">
+          <button type="button" id="owed-pager-prev" class="outline pager-btn">&lsaquo; Prev</button>
+          <span id="owed-pager-info" class="pager-info"></span>
+          <button type="button" id="owed-pager-next" class="outline pager-btn">Next &rsaquo;</button>
+        </div>
+      </aside>
 
       <p id="message" class="message"></p>
     </main>
