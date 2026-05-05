@@ -506,6 +506,87 @@ button.action-delete:hover {
 .appt-chip.owed { background: var(--chip-owed-bg); color: var(--chip-owed-text); }
 .appt-chip.paid { background: var(--chip-paid-bg); color: var(--chip-paid-text); }
 
+/* +N more button */
+.more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: var(--chip-bg, #eef4f4);
+  color: var(--primary, #2563eb);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+.more-btn:hover { background: var(--primary, #2563eb); color: #fff; }
+
+/* Day popup overlay */
+.day-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.day-popup {
+  background: var(--surface, #fff);
+  border-radius: 14px;
+  padding: 20px 24px;
+  max-width: 460px;
+  width: 92%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+
+.day-popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.day-popup-head h3 { margin: 0; font-size: 1.05rem; }
+
+.day-popup-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-popup-item {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: 4px 10px;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--chip-bg, #eef4f4);
+  color: var(--text, #333);
+  font-size: 0.88rem;
+  transition: background .15s;
+}
+.day-popup-item:hover { filter: brightness(.95); }
+.day-popup-item.owed { background: var(--chip-owed-bg); color: var(--chip-owed-text); }
+.day-popup-item.paid { background: var(--chip-paid-bg); color: var(--chip-paid-text); }
+.day-popup-time { font-weight: 600; }
+.day-popup-name { font-weight: 500; }
+.day-popup-addr { grid-column: 1 / -1; font-size: 0.8rem; opacity: 0.7; }
+
+.day-popup-add {
+  margin-top: 12px;
+  width: 100%;
+  text-align: center;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: 1.1fr 1fr 0.8fr 1.3fr auto;

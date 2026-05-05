@@ -4,6 +4,54 @@ const state = {
   appointments: [],
 };
 
+/* ── Custom Dialog ── */
+function showDialog(message, isError) {
+  const existing = document.getElementById('app-dialog-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'app-dialog-overlay';
+  Object.assign(overlay.style, {
+    position: 'fixed', inset: '0', background: 'rgba(0,0,0,.45)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: '9999',
+  });
+
+  const box = document.createElement('div');
+  Object.assign(box.style, {
+    background: 'var(--surface, #fff)', borderRadius: '12px', padding: '24px 28px',
+    maxWidth: '380px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,.18)',
+    textAlign: 'center', fontFamily: 'inherit',
+  });
+
+  const title = document.createElement('h3');
+  title.textContent = 'AnaLu Therapy Hub';
+  Object.assign(title.style, { margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--text, #222)' });
+
+  const msg = document.createElement('p');
+  msg.textContent = message;
+  Object.assign(msg.style, {
+    margin: '0 0 20px', fontSize: '0.95rem', lineHeight: '1.5',
+    color: isError ? 'var(--danger, #c0392b)' : 'var(--text, #444)',
+  });
+
+  const btn = document.createElement('button');
+  btn.textContent = 'OK';
+  Object.assign(btn.style, {
+    padding: '8px 32px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+    fontSize: '0.95rem', fontWeight: '600',
+    background: isError ? 'var(--danger, #c0392b)' : 'var(--primary, #2563eb)',
+    color: '#fff',
+  });
+
+  btn.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  box.append(title, msg, btn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  btn.focus();
+}
+
 const calendarView = document.getElementById('calendar-view');
 const calendarPrev = document.getElementById('calendar-prev');
 const calendarToday = document.getElementById('calendar-today');
@@ -216,6 +264,76 @@ function renderCalendar() {
     grouped.get(key).push(appointment);
   });
 
+  function buildChip(appointment) {
+    const link = document.createElement('a');
+    const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
+    link.className = `appt-chip ${chipClass}`;
+    link.href = `/appointments.html?id=${appointment.id}`;
+    link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
+    return link;
+  }
+
+  function showDayPopup(date, events) {
+    const existing = document.getElementById('day-popup-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'day-popup-overlay';
+    overlay.className = 'day-popup-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'day-popup';
+
+    const header = document.createElement('div');
+    header.className = 'day-popup-head';
+    const heading = document.createElement('h3');
+    heading.textContent = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'outline';
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', () => overlay.remove());
+    header.append(heading, closeBtn);
+
+    const list = document.createElement('div');
+    list.className = 'day-popup-list';
+    events.forEach((appointment) => {
+      const row = document.createElement('a');
+      const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
+      row.className = `day-popup-item ${chipClass}`;
+      row.href = `/appointments.html?id=${appointment.id}`;
+
+      const time = document.createElement('span');
+      time.className = 'day-popup-time';
+      time.textContent = new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+      const name = document.createElement('span');
+      name.className = 'day-popup-name';
+      name.textContent = appointment.full_name;
+
+      const addr = document.createElement('span');
+      addr.className = 'day-popup-addr';
+      addr.textContent = appointment.location || '';
+
+      row.append(time, name, addr);
+      list.appendChild(row);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'outline day-popup-add';
+    addBtn.textContent = '+ Quick Add to this day';
+    addBtn.addEventListener('click', () => {
+      overlay.remove();
+      prefillDate(date);
+    });
+
+    box.append(header, list, addBtn);
+    overlay.appendChild(box);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  const MONTH_VISIBLE = 3;
+
   if (state.view === 'month') {
     calendarGrid.className = 'calendar-grid month';
     const mStart = new Date(state.date.getFullYear(), state.date.getMonth(), 1);
@@ -232,18 +350,26 @@ function renderCalendar() {
       title.textContent = `${date.getDate()} ${date.toLocaleString('en-GB', { weekday: 'short' })}${isSameDay(date, new Date()) ? ' - Today' : ''}`;
       cell.appendChild(title);
 
-      (grouped.get(dayKey(date)) || []).slice(0, 4).forEach((appointment) => {
-        const link = document.createElement('a');
-        const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
-        link.className = `appt-chip ${chipClass}`;
-        link.href = `/appointments.html?id=${appointment.id}`;
-        link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
-        cell.appendChild(link);
+      const events = grouped.get(dayKey(date)) || [];
+      events.slice(0, MONTH_VISIBLE).forEach((appointment) => {
+        cell.appendChild(buildChip(appointment));
       });
+
+      if (events.length > MONTH_VISIBLE) {
+        const more = document.createElement('button');
+        more.className = 'more-btn';
+        more.textContent = `+${events.length - MONTH_VISIBLE} more`;
+        const cellDate = new Date(date);
+        more.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showDayPopup(cellDate, events);
+        });
+        cell.appendChild(more);
+      }
 
       const cellDate = new Date(date);
       cell.addEventListener('click', (e) => {
-        if (e.target.closest('a')) return;
+        if (e.target.closest('a') || e.target.closest('.more-btn')) return;
         prefillDate(cellDate);
       });
 
@@ -253,6 +379,7 @@ function renderCalendar() {
   }
 
   calendarGrid.className = 'calendar-grid week';
+  const WEEK_VISIBLE = 6;
   for (let i = 0; i < 7; i += 1) {
     const date = addDays(start, i);
     const cell = document.createElement('article');
@@ -270,14 +397,20 @@ function renderCalendar() {
       empty.textContent = 'No appointments';
       cell.appendChild(empty);
     } else {
-      events.forEach((appointment) => {
-        const link = document.createElement('a');
-        const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
-        link.className = `appt-chip ${chipClass}`;
-        link.href = `/appointments.html?id=${appointment.id}`;
-        link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
-        cell.appendChild(link);
+      events.slice(0, WEEK_VISIBLE).forEach((appointment) => {
+        cell.appendChild(buildChip(appointment));
       });
+      if (events.length > WEEK_VISIBLE) {
+        const more = document.createElement('button');
+        more.className = 'more-btn';
+        more.textContent = `+${events.length - WEEK_VISIBLE} more`;
+        const cellDate = new Date(date);
+        more.addEventListener('click', (e) => {
+          e.stopPropagation();
+          showDayPopup(cellDate, events);
+        });
+        cell.appendChild(more);
+      }
     }
 
     const cellDate = new Date(date);
@@ -359,15 +492,15 @@ appointmentForm.addEventListener('submit', async (event) => {
       body: JSON.stringify(payload),
     });
 
-    // Keep patient, address, fee, therapist — clear date, comments, paid
-    appointmentDateInput.value = '';
-    document.getElementById('comments').value = '';
-    const paidCheckbox = document.getElementById('markAsPaid');
-    if (paidCheckbox) paidCheckbox.checked = false;
-    AppCommon.setMessage('Appointment created — form ready for another.');
+    // Clear the whole form
+    appointmentForm.reset();
+    document.getElementById('durationMinutes').value = '60';
+    if (clientSearchSelect) clientSearchSelect.clear();
+    if (therapistSelect) therapistSelect.selectedIndex = 0;
     await loadAppointments();
+    showDialog('Appointment created successfully!');
   } catch (error) {
-    AppCommon.setMessage(error.message, true);
+    showDialog(error.message, true);
   }
 });
 
@@ -425,13 +558,13 @@ function initBulkForm() {
   bulkAddDateBtn.addEventListener('click', () => {
     const val = bulkDateInput.value;
     if (!val) {
-      AppCommon.setMessage('Pick a date and time first.', true);
+      showDialog('Please pick a date and time first.', true);
       return;
     }
     const d = new Date(val);
     const exists = bulkDates.some((existing) => existing.getTime() === d.getTime());
     if (exists) {
-      AppCommon.setMessage('That date/time is already added.', true);
+      showDialog('That date and time is already in the list.', true);
       return;
     }
     bulkDates.push(d);
@@ -442,11 +575,11 @@ function initBulkForm() {
   bulkForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (bulkDates.length === 0) {
-      AppCommon.setMessage('Add at least one date.', true);
+      showDialog('Please add at least one date before creating.', true);
       return;
     }
     if (!bulkClientSelect.value) {
-      AppCommon.setMessage('Please select a patient.', true);
+      showDialog('Please select a patient.', true);
       return;
     }
 
@@ -466,7 +599,7 @@ function initBulkForm() {
     if (user && user.role === 'admin') {
       const sel = bulkTherapistSelect.value;
       if (!sel) {
-        AppCommon.setMessage('Please select a therapist.', true);
+        showDialog('Please select a therapist.', true);
         return;
       }
       payload.userId = Number(sel);
@@ -474,7 +607,7 @@ function initBulkForm() {
 
     const feeAmount = parseFeeAmount(bulkFeeInput.value);
     if (Number.isNaN(feeAmount)) {
-      AppCommon.setMessage('Fee must be a valid number.', true);
+      showDialog('Fee must be a valid number.', true);
       return;
     }
     if (feeAmount !== null) {
@@ -486,7 +619,6 @@ function initBulkForm() {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      AppCommon.setMessage(`${result.count} appointment${result.count !== 1 ? 's' : ''} created.`);
       bulkDates.length = 0;
       renderChips();
       bulkForm.reset();
@@ -496,8 +628,9 @@ function initBulkForm() {
       if (bulkClientSearchSelect) bulkClientSearchSelect.clear();
       if (bulkTherapistSelect) bulkTherapistSelect.selectedIndex = 0;
       await loadAppointments();
+      showDialog(`${result.count} appointment${result.count !== 1 ? 's' : ''} created successfully!`);
     } catch (error) {
-      AppCommon.setMessage(error.message, true);
+      showDialog(error.message, true);
     }
   });
 }

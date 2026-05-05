@@ -1,7 +1,20 @@
 {
-  "version": "2.7",
-  "releaseDate": "2026-05-04",
+  "version": "2.8",
+  "releaseDate": "2026-05-05",
   "history": [
+    {
+      "version": "2.8",
+      "date": "2026-05-05",
+      "summary": "Calendar overflow handled, day detail popup, branded confirmation dialogs.",
+      "changes": [
+        "Days with many appointments now show a '+N more' button instead of overflowing the calendar cell",
+        "Clicking '+N more' opens a day popup showing all appointments with time, name, and address",
+        "Each appointment in the day popup is clickable to open it for editing",
+        "Day popup includes a 'Quick Add to this day' button to pre-fill the form",
+        "Success and error messages now appear as branded 'AnaLu Therapy Hub' dialogs instead of browser alerts",
+        "Quick Add form fully resets after creating an appointment"
+      ]
+    },
     {
       "version": "2.7",
       "date": "2026-05-04",
