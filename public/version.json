@@ -1,7 +1,18 @@
 {
-  "version": "2.8",
-  "releaseDate": "2026-05-05",
+  "version": "2.9",
+  "releaseDate": "2026-05-07",
   "history": [
+    {
+      "version": "2.9",
+      "date": "2026-05-07",
+      "summary": "Bulk Add moved to Appointment Management, Schedule Hub simplified.",
+      "changes": [
+        "Bulk Add Appointments is now inside Appointment Management — click 'Bulk Add' next to 'New Appointment'",
+        "Schedule Hub is cleaner — only the calendar and Quick Add form, no bulk section",
+        "Bulk Add drawer uses branded confirmation dialogs for success and error messages",
+        "Drawer closes automatically after appointments are created"
+      ]
+    },
     {
       "version": "2.8",
       "date": "2026-05-05",

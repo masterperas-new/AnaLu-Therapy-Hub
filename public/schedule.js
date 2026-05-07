@@ -138,7 +138,6 @@ function parseFeeAmount(value) {
 }
 
 let clientSearchSelect = null;
-let bulkClientSearchSelect = null;
 
 function lastApptLabel(date) {
   if (!date) return 'No appointments yet';
@@ -191,23 +190,6 @@ async function loadClients() {
   } else {
     clientSearchSelect.setItems(items);
   }
-
-  // Populate bulk client select
-  const bulkClientSelect = document.getElementById('bulkClientId');
-  bulkClientSelect.innerHTML = '<option value="" selected disabled>Select a patient</option>';
-  sorted.forEach((client) => {
-    const option = document.createElement('option');
-    option.value = String(client.id);
-    option.textContent = client.full_name;
-    bulkClientSelect.appendChild(option);
-  });
-  if (!bulkClientSearchSelect) {
-    bulkClientSearchSelect = AppCommon.createSearchSelect(bulkClientSelect, items, {
-      placeholder: 'Search patient…',
-    });
-  } else {
-    bulkClientSearchSelect.setItems(items);
-  }
 }
 
 // Preload address when patient selected
@@ -228,17 +210,13 @@ async function loadTherapists() {
   if (!user || user.role !== 'admin') return;
 
   therapistFieldWrap.classList.remove('hidden');
-  document.getElementById('bulk-therapist-field-wrap').classList.remove('hidden');
   const therapists = await AppCommon.api('/ALTApi/users/therapists');
   therapistSelect.innerHTML = '<option value="" selected disabled>Select a therapist</option>';
-  const bulkTherapistSelect = document.getElementById('bulkTherapistId');
-  bulkTherapistSelect.innerHTML = '<option value="" selected disabled>Select a therapist</option>';
   therapists.forEach((t) => {
     const option = document.createElement('option');
     option.value = String(t.id);
     option.textContent = t.full_name;
-    therapistSelect.appendChild(option.cloneNode(true));
-    bulkTherapistSelect.appendChild(option);
+    therapistSelect.appendChild(option);
   });
 }
 
@@ -510,129 +488,6 @@ async function initPage() {
   state.view = savedView;
   calendarView.value = savedView;
   await Promise.all([loadClients(), loadSettings(), loadTherapists(), loadAppointments()]);
-  initBulkForm();
-}
-
-/* ── Bulk Add Appointments ── */
-function initBulkForm() {
-  const bulkForm = document.getElementById('bulk-form');
-  const bulkDateInput = document.getElementById('bulkDateInput');
-  const bulkAddDateBtn = document.getElementById('bulkAddDate');
-  const bulkDateChips = document.getElementById('bulkDateChips');
-  const bulkSubmitBtn = document.getElementById('bulkSubmitBtn');
-  const bulkClientSelect = document.getElementById('bulkClientId');
-  const bulkFeeInput = document.getElementById('bulkFee');
-  const bulkDuration = document.getElementById('bulkDuration');
-  const bulkAddress = document.getElementById('bulkAddress');
-  const bulkComments = document.getElementById('bulkComments');
-  const bulkTherapistSelect = document.getElementById('bulkTherapistId');
-
-  const bulkDates = [];
-
-  bulkClientSelect.addEventListener('change', () => {
-    const clientId = Number(bulkClientSelect.value);
-    if (clientId && clientsById.has(clientId)) {
-      bulkAddress.value = clientsById.get(clientId).address || '';
-    }
-  });
-
-  function renderChips() {
-    bulkDateChips.innerHTML = '';
-    bulkDates.sort((a, b) => a.getTime() - b.getTime());
-    bulkDates.forEach((d, idx) => {
-      const chip = document.createElement('span');
-      chip.className = 'date-chip';
-      const label = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      chip.innerHTML = `${label} <button type="button" class="date-chip-remove" data-idx="${idx}">&times;</button>`;
-      chip.querySelector('.date-chip-remove').addEventListener('click', () => {
-        bulkDates.splice(idx, 1);
-        renderChips();
-      });
-      bulkDateChips.appendChild(chip);
-    });
-    const count = bulkDates.length;
-    bulkSubmitBtn.textContent = `Create ${count} Appointment${count !== 1 ? 's' : ''}`;
-    bulkSubmitBtn.disabled = count === 0;
-  }
-
-  bulkAddDateBtn.addEventListener('click', () => {
-    const val = bulkDateInput.value;
-    if (!val) {
-      showDialog('Please pick a date and time first.', true);
-      return;
-    }
-    const d = new Date(val);
-    const exists = bulkDates.some((existing) => existing.getTime() === d.getTime());
-    if (exists) {
-      showDialog('That date and time is already in the list.', true);
-      return;
-    }
-    bulkDates.push(d);
-    bulkDateInput.value = '';
-    renderChips();
-  });
-
-  bulkForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (bulkDates.length === 0) {
-      showDialog('Please add at least one date before creating.', true);
-      return;
-    }
-    if (!bulkClientSelect.value) {
-      showDialog('Please select a patient.', true);
-      return;
-    }
-
-    const user = AppCommon.getUser();
-    const bulkPaidCheckbox = document.getElementById('bulkMarkAsPaid');
-    const bulkPaymentTypeSelect = document.getElementById('bulkPaymentType');
-    const payload = {
-      clientId: Number(bulkClientSelect.value),
-      appointmentDates: bulkDates.map((d) => d.toISOString()),
-      address: bulkAddress.value,
-      durationMinutes: Number(bulkDuration.value || 60),
-      comments: bulkComments.value,
-      wireReceived: bulkPaidCheckbox ? bulkPaidCheckbox.checked : false,
-      paymentType: bulkPaymentTypeSelect ? bulkPaymentTypeSelect.value || null : null,
-    };
-
-    if (user && user.role === 'admin') {
-      const sel = bulkTherapistSelect.value;
-      if (!sel) {
-        showDialog('Please select a therapist.', true);
-        return;
-      }
-      payload.userId = Number(sel);
-    }
-
-    const feeAmount = parseFeeAmount(bulkFeeInput.value);
-    if (Number.isNaN(feeAmount)) {
-      showDialog('Fee must be a valid number.', true);
-      return;
-    }
-    if (feeAmount !== null) {
-      payload.feeAmount = feeAmount;
-    }
-
-    try {
-      const result = await AppCommon.api('/ALTApi/appointments/batch', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      bulkDates.length = 0;
-      renderChips();
-      bulkForm.reset();
-      bulkDuration.value = '60';
-      if (bulkPaidCheckbox) bulkPaidCheckbox.checked = false;
-      if (bulkPaymentTypeSelect) bulkPaymentTypeSelect.value = '';
-      if (bulkClientSearchSelect) bulkClientSearchSelect.clear();
-      if (bulkTherapistSelect) bulkTherapistSelect.selectedIndex = 0;
-      await loadAppointments();
-      showDialog(`${result.count} appointment${result.count !== 1 ? 's' : ''} created successfully!`);
-    } catch (error) {
-      showDialog(error.message, true);
-    }
-  });
 }
 
 AppCommon.ensureAuth(initPage);

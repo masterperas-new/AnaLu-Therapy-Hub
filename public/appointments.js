@@ -650,6 +650,54 @@ async function initPage() {
   }
 }
 
+/* ── Custom Dialog ── */
+function showDialog(message, isError) {
+  const existing = document.getElementById('app-dialog-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'app-dialog-overlay';
+  Object.assign(overlay.style, {
+    position: 'fixed', inset: '0', background: 'rgba(0,0,0,.45)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: '9999',
+  });
+
+  const box = document.createElement('div');
+  Object.assign(box.style, {
+    background: 'var(--surface, #fff)', borderRadius: '12px', padding: '24px 28px',
+    maxWidth: '380px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,.18)',
+    textAlign: 'center', fontFamily: 'inherit',
+  });
+
+  const title = document.createElement('h3');
+  title.textContent = 'AnaLu Therapy Hub';
+  Object.assign(title.style, { margin: '0 0 12px', fontSize: '1.1rem', color: 'var(--text, #222)' });
+
+  const msg = document.createElement('p');
+  msg.textContent = message;
+  Object.assign(msg.style, {
+    margin: '0 0 20px', fontSize: '0.95rem', lineHeight: '1.5',
+    color: isError ? 'var(--danger, #c0392b)' : 'var(--text, #444)',
+  });
+
+  const btn = document.createElement('button');
+  btn.textContent = 'OK';
+  Object.assign(btn.style, {
+    padding: '8px 32px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+    fontSize: '0.95rem', fontWeight: '600',
+    background: isError ? 'var(--danger, #c0392b)' : 'var(--primary, #2563eb)',
+    color: '#fff',
+  });
+
+  btn.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  box.append(title, msg, btn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  btn.focus();
+}
+
 /* ── Bulk Add Appointments ── */
 let bulkClientSearchSelect = null;
 
@@ -763,13 +811,13 @@ function initBulkForm() {
   bulkAddDateBtn.addEventListener('click', () => {
     const val = bulkDateInput.value;
     if (!val) {
-      AppCommon.setMessage('Pick a date and time first.', true);
+      showDialog('Please pick a date and time first.', true);
       return;
     }
     const d = new Date(val);
     const exists = bulkDates.some((existing) => existing.getTime() === d.getTime());
     if (exists) {
-      AppCommon.setMessage('That date/time is already added.', true);
+      showDialog('That date and time is already in the list.', true);
       return;
     }
     bulkDates.push(d);
@@ -780,11 +828,11 @@ function initBulkForm() {
   bulkForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (bulkDates.length === 0) {
-      AppCommon.setMessage('Add at least one date.', true);
+      showDialog('Please add at least one date before creating.', true);
       return;
     }
     if (!bulkClientSelect.value) {
-      AppCommon.setMessage('Please select a patient.', true);
+      showDialog('Please select a patient.', true);
       return;
     }
 
@@ -803,7 +851,7 @@ function initBulkForm() {
     if (isAdmin) {
       const sel = bulkTherapistSelect.value;
       if (!sel) {
-        AppCommon.setMessage('Please select a therapist.', true);
+        showDialog('Please select a therapist.', true);
         return;
       }
       payload.userId = Number(sel);
@@ -819,7 +867,6 @@ function initBulkForm() {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      AppCommon.setMessage(`${result.count} appointment${result.count !== 1 ? 's' : ''} created.`);
       bulkDates.length = 0;
       renderChips();
       bulkForm.reset();
@@ -829,9 +876,10 @@ function initBulkForm() {
       if (bulkClientSearchSelect) bulkClientSearchSelect.clear();
       if (bulkTherapistSelect) bulkTherapistSelect.selectedIndex = 0;
       await loadAppointments();
-      setTimeout(closeBulkDrawer, 1500);
+      closeBulkDrawer();
+      showDialog(`${result.count} appointment${result.count !== 1 ? 's' : ''} created successfully!`);
     } catch (error) {
-      AppCommon.setMessage(error.message, true);
+      showDialog(error.message, true);
     }
   });
 }
