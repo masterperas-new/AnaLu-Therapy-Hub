@@ -251,16 +251,48 @@ async function initializeDatabaseSchema() {
           wire_received INTEGER NOT NULL DEFAULT 0,
           wire_received_date TEXT,
           payment_type TEXT,
+          recurrence_id INTEGER,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
         )
       `);
 
+      // Add recurrence_id column if missing (migration)
+      try {
+        await db.run(`ALTER TABLE appointments ADD COLUMN recurrence_id INTEGER`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
+
       // Create index on appointments date
       await db.run(
         `CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date)`
       );
+
+      // Create recurrences table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS recurrences (
+          id SERIAL PRIMARY KEY,
+          client_id INTEGER NOT NULL,
+          user_id INTEGER,
+          frequency TEXT NOT NULL,
+          day_of_week INTEGER NOT NULL,
+          time_of_day TEXT NOT NULL,
+          start_date TEXT NOT NULL,
+          end_date TEXT NOT NULL,
+          address TEXT NOT NULL,
+          duration_minutes INTEGER NOT NULL DEFAULT 60,
+          fee_cents INTEGER NOT NULL,
+          payment_type TEXT,
+          comments TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          cancelled_at TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `);
 
       // Create settings table
       await db.run(`
@@ -397,15 +429,47 @@ async function initializeDatabaseSchema() {
           wire_received INTEGER NOT NULL DEFAULT 0,
           wire_received_date TEXT,
           payment_type TEXT,
+          recurrence_id INTEGER,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
         )
       `);
 
+      // Add recurrence_id column if missing (migration)
+      try {
+        await db.run(`ALTER TABLE appointments ADD COLUMN recurrence_id INTEGER`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
+
       await db.run(
         `CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date)`
       );
+
+      // Create recurrences table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS recurrences (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          client_id INTEGER NOT NULL,
+          user_id INTEGER,
+          frequency TEXT NOT NULL,
+          day_of_week INTEGER NOT NULL,
+          time_of_day TEXT NOT NULL,
+          start_date TEXT NOT NULL,
+          end_date TEXT NOT NULL,
+          address TEXT NOT NULL,
+          duration_minutes INTEGER NOT NULL DEFAULT 60,
+          fee_cents INTEGER NOT NULL,
+          payment_type TEXT,
+          comments TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          cancelled_at TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `);
 
       await db.run(`
         CREATE TABLE IF NOT EXISTS settings (

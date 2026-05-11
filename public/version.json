@@ -1,7 +1,20 @@
 {
-  "version": "2.9",
-  "releaseDate": "2026-05-07",
+  "version": "2.9.1",
+  "releaseDate": "2026-05-11",
   "history": [
+    {
+      "version": "2.9.1",
+      "date": "2026-05-11",
+      "summary": "Recurring Appointments — schedule repeating sessions automatically.",
+      "changes": [
+        "New 'Recurring' button in Appointment Management to set up repeating appointments",
+        "Choose weekly, every 2 weeks, or monthly — pick the day, time, and date range",
+        "Preview all generated dates before creating them",
+        "Each recurring appointment can still be edited or deleted individually",
+        "Recurring appointments show a ↻ icon in the table and a badge when editing",
+        "Manage Active tab lets you see all recurring series and cancel future ones (past appointments are kept)"
+      ]
+    },
     {
       "version": "2.9",
       "date": "2026-05-07",

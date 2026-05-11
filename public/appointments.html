@@ -101,6 +101,9 @@
           <div class="results-header">
             <h2>Appointments <span id="filter-summary" class="filter-summary"></span></h2>
             <div style="display:flex;gap:8px">
+              <button type="button" id="pager-start" class="outline" title="Go to first page">&laquo; Start</button>
+              <button type="button" id="pager-today" class="outline" title="Jump to today">Today</button>
+              <button type="button" id="recurring-appointment" class="outline">↻ Recurring</button>
               <button type="button" id="bulk-add-appointment" class="outline">Bulk Add</button>
               <button type="button" id="new-appointment" class="action-create-blue">New Appointment</button>
             </div>
@@ -135,6 +138,9 @@
           <div class="editor-drawer-head">
             <h2 id="editor-title">Edit Appointment</h2>
             <button type="button" id="close-editor" class="outline">Close</button>
+          </div>
+          <div id="recurring-badge" class="recurring-badge hidden">
+            <span>↻</span> Part of a recurring series
           </div>
           <form id="appointment-form" class="grid-2">
             <input id="appointmentId" type="hidden" />
@@ -250,6 +256,105 @@
               <button type="submit" class="action-create" id="bulkSubmitBtn" disabled>Create 0 Appointments</button>
             </div>
           </form>
+        </aside>
+
+        <div id="recurring-overlay" class="editor-overlay hidden"></div>
+        <aside id="recurring-drawer" class="editor-drawer hidden" aria-hidden="true" style="max-width:520px">
+          <div class="editor-drawer-head">
+            <h2 id="recurring-title">Recurring Appointments</h2>
+            <button type="button" id="close-recurring" class="outline">Close</button>
+          </div>
+
+          <!-- Tab bar -->
+          <div class="rec-tabs" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--line)">
+            <button type="button" class="rec-tab active" data-tab="create">Create New</button>
+            <button type="button" class="rec-tab" data-tab="manage">Manage Active</button>
+          </div>
+
+          <!-- Create tab -->
+          <div id="rec-tab-create" class="rec-tab-content">
+            <p class="small" style="margin-bottom:10px;color:var(--muted)">Schedule appointments that repeat automatically.</p>
+            <form id="recurring-form" class="grid-2">
+              <div>
+                <label for="recClientId">Patient</label>
+                <select id="recClientId" required></select>
+              </div>
+              <div id="rec-therapist-field-wrap" class="hidden">
+                <label for="recTherapistId">Therapist</label>
+                <select id="recTherapistId"></select>
+              </div>
+              <div>
+                <label for="recFrequency">Frequency</label>
+                <select id="recFrequency" required>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 Weeks</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label for="recDayOfWeek">Day of Week</label>
+                <select id="recDayOfWeek" required>
+                  <option value="1">Monday</option>
+                  <option value="2">Tuesday</option>
+                  <option value="3">Wednesday</option>
+                  <option value="4">Thursday</option>
+                  <option value="5">Friday</option>
+                  <option value="6">Saturday</option>
+                  <option value="0">Sunday</option>
+                </select>
+              </div>
+              <div>
+                <label for="recTime">Time</label>
+                <input id="recTime" type="time" value="09:00" required />
+              </div>
+              <div>
+                <label for="recStartDate">Start Date</label>
+                <input id="recStartDate" type="date" required />
+              </div>
+              <div>
+                <label for="recEndDate">End Date</label>
+                <input id="recEndDate" type="date" required />
+              </div>
+              <div>
+                <label for="recAddress">Address</label>
+                <input id="recAddress" type="text" required />
+              </div>
+              <div>
+                <label for="recDuration">Duration (minutes)</label>
+                <input id="recDuration" type="number" min="1" value="60" required />
+              </div>
+              <div data-therapist-only>
+                <label for="recFee">Fee (EUR)</label>
+                <input id="recFee" type="number" min="0" step="0.01" />
+              </div>
+              <div data-therapist-only>
+                <label for="recPaymentType">Payment Type</label>
+                <select id="recPaymentType">
+                  <option value="">Not set</option>
+                  <option value="Cash">Cash</option>
+                  <option value="MBWay">MBWay</option>
+                  <option value="Card">Card</option>
+                  <option value="Transfer">Transfer</option>
+                </select>
+              </div>
+              <div style="grid-column: 1 / -1;">
+                <label for="recComments">Comments</label>
+                <input id="recComments" type="text" />
+              </div>
+              <div style="grid-column: 1 / -1;">
+                <button type="button" id="recPreviewBtn" class="outline" style="width:100%">Preview Dates</button>
+                <div id="recPreviewChips" class="date-chips" style="margin-top:8px"></div>
+              </div>
+              <div style="grid-column: 1 / -1;">
+                <button type="submit" class="action-create" id="recSubmitBtn" disabled>Create Recurring Appointments</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Manage tab -->
+          <div id="rec-tab-manage" class="rec-tab-content" style="display:none">
+            <div id="recurrences-list"></div>
+          </div>
         </aside>
 
         <div id="patient-info-overlay" class="editor-overlay hidden"></div>

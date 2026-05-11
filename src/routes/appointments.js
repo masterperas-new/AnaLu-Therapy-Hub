@@ -121,7 +121,8 @@ router.get('/', async (req, res) => {
         a.payment_type,
         a.user_id,
         u.full_name AS therapist_name,
-        a.created_at
+        a.created_at,
+        a.recurrence_id
       FROM appointments a
       JOIN clients c ON c.id = a.client_id
       LEFT JOIN users u ON u.id = a.user_id
@@ -166,7 +167,8 @@ router.get('/:id', async (req, res) => {
         a.payment_type,
         a.user_id,
         u.full_name AS therapist_name,
-        a.created_at
+        a.created_at,
+        a.recurrence_id
       FROM appointments a
       JOIN clients c ON c.id = a.client_id
       LEFT JOIN users u ON u.id = a.user_id

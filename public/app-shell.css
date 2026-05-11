@@ -587,6 +587,84 @@ button.action-delete:hover {
   text-align: center;
 }
 
+/* Recurring tabs */
+.rec-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted, #888);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.rec-tab.active {
+  color: var(--primary, #2563eb);
+  border-bottom-color: var(--primary, #2563eb);
+}
+.rec-tab:hover { color: var(--text, #333); }
+
+/* Recurrence cards in manage tab */
+.rec-card {
+  border: 1px solid var(--line, #e0e0e0);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--surface, #fff);
+}
+.rec-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.rec-card-head strong { font-size: 0.95rem; }
+.rec-card-status {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.rec-card-status.active { background: #e8f7ee; color: var(--ok, #27ae60); }
+.rec-card-status.cancelled { background: #fdecea; color: var(--danger, #c0392b); }
+.rec-card-detail {
+  font-size: 0.84rem;
+  color: var(--muted, #888);
+  margin: 2px 0;
+}
+.rec-card-actions { margin-top: 10px; }
+
+/* Recurrence indicator in table */
+.rec-icon {
+  display: inline-block;
+  font-size: 0.85rem;
+  margin-left: 4px;
+  cursor: pointer;
+  color: var(--primary, #2563eb);
+  vertical-align: middle;
+}
+
+/* Recurring badge in editor */
+.recurring-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: var(--primary, #2563eb);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.recurring-badge span {
+  font-size: 1.1rem;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: 1.1fr 1fr 0.8fr 1.3fr auto;

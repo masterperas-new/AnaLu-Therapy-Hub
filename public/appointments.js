@@ -29,6 +29,8 @@ const therapistColHead = document.getElementById('therapist-col-head');
 const pager = document.getElementById('pager');
 const pagerPrev = document.getElementById('pager-prev');
 const pagerNext = document.getElementById('pager-next');
+const pagerStart = document.getElementById('pager-start');
+const pagerToday = document.getElementById('pager-today');
 const pagerInfo = document.getElementById('pager-info');
 
 const PAGE_SIZE = 5;
@@ -69,6 +71,8 @@ function clearForm() {
   deleteAppointmentBtn.disabled = true;
   deleteAppointmentBtn.classList.add('hidden');
   if (isAdmin && therapistSelect) therapistSelect.value = '';
+  const badge = document.getElementById('recurring-badge');
+  if (badge) badge.classList.add('hidden');
 }
 
 function openEditor(title = 'Edit Appointment') {
@@ -295,7 +299,7 @@ function renderAppointmentsTable(rows) {
     tr.className = 'appt-row';
     tr.tabIndex = 0;
     tr.innerHTML = `
-      <td>${new Date(appointment.appointment_date).toLocaleString('en-GB')}</td>
+      <td>${new Date(appointment.appointment_date).toLocaleString('en-GB')}${appointment.recurrence_id ? ' <span class="rec-icon" title="Recurring appointment">↻</span>' : ''}</td>
       <td>
         <div class="name-cell">
           <span>${appointment.full_name}</span>
@@ -427,6 +431,8 @@ async function loadAppointments() {
 async function loadAppointmentById(id) {
   const appointment = await AppCommon.api(`/ALTApi/appointments/${id}`);
   document.getElementById('appointmentId').value = String(appointment.id);
+  const badge = document.getElementById('recurring-badge');
+  if (appointment.recurrence_id) { badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
   document.getElementById('clientId').value = String(appointment.client_id);
   if (clientSearchSelect) clientSearchSelect.setValue(appointment.client_id);
   document.getElementById('appointmentDate').value = dateToInputValue(appointment.appointment_date);
@@ -595,6 +601,36 @@ pagerNext.addEventListener('click', () => {
   }
 });
 
+pagerStart.addEventListener('click', () => {
+  if (currentPage !== 1) {
+    currentPage = 1;
+    renderAppointmentsTable(currentRows);
+  }
+});
+
+pagerToday.addEventListener('click', () => {
+  if (!currentRows.length) return;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Find the row closest to today
+  let bestIdx = 0;
+  let bestDiff = Infinity;
+  currentRows.forEach((row, idx) => {
+    const diff = Math.abs(new Date(row.appointment_date).getTime() - now.getTime());
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIdx = idx;
+    }
+  });
+
+  const targetPage = Math.floor(bestIdx / PAGE_SIZE) + 1;
+  if (targetPage !== currentPage) {
+    currentPage = targetPage;
+    renderAppointmentsTable(currentRows);
+  }
+});
+
 sortButtons.forEach((button) => {
   button.addEventListener('click', () => {
     const key = button.dataset.sortKey;
@@ -622,6 +658,7 @@ async function initPage() {
     therapistFieldWrap.classList.remove('hidden');
     therapistColHead.classList.remove('hidden');
     document.getElementById('bulk-therapist-field-wrap').classList.remove('hidden');
+    document.getElementById('rec-therapist-field-wrap').classList.remove('hidden');
   }
 
   const initPromises = [loadClients(), loadSettings()];
@@ -629,6 +666,7 @@ async function initPage() {
   await Promise.all(initPromises);
   clearForm();
   initBulkForm();
+  initRecurringForm();
   await loadAppointments();
 
   const url = new URL(window.location.href);
@@ -882,6 +920,256 @@ function initBulkForm() {
       showDialog(error.message, true);
     }
   });
+}
+
+/* ── Recurring Appointments ── */
+function initRecurringForm() {
+  const recForm = document.getElementById('recurring-form');
+  const recOverlay = document.getElementById('recurring-overlay');
+  const recDrawer = document.getElementById('recurring-drawer');
+  const closeRecBtn = document.getElementById('close-recurring');
+  const openRecBtn = document.getElementById('recurring-appointment');
+  const previewBtn = document.getElementById('recPreviewBtn');
+  const previewChips = document.getElementById('recPreviewChips');
+  const submitBtn = document.getElementById('recSubmitBtn');
+  const recClientSelect = document.getElementById('recClientId');
+  const recTherapistSelect = document.getElementById('recTherapistId');
+  const recFrequency = document.getElementById('recFrequency');
+  const recDayOfWeek = document.getElementById('recDayOfWeek');
+  const recTime = document.getElementById('recTime');
+  const recStartDate = document.getElementById('recStartDate');
+  const recEndDate = document.getElementById('recEndDate');
+  const recAddress = document.getElementById('recAddress');
+  const recDuration = document.getElementById('recDuration');
+  const recFee = document.getElementById('recFee');
+  const recPaymentType = document.getElementById('recPaymentType');
+  const recComments = document.getElementById('recComments');
+  const recurrencesList = document.getElementById('recurrences-list');
+
+  const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  let previewDates = [];
+
+  /* Populate client select */
+  recClientSelect.innerHTML = '<option value="" selected disabled>Select a patient</option>';
+  const clients = [...clientsById.values()].sort((a, b) => {
+    const aDate = a.last_appointment_date ? new Date(a.last_appointment_date).getTime() : 0;
+    const bDate = b.last_appointment_date ? new Date(b.last_appointment_date).getTime() : 0;
+    if (bDate !== aDate) return bDate - aDate;
+    return a.full_name.localeCompare(b.full_name);
+  });
+  const items = clients.map((c) => ({
+    id: c.id,
+    label: c.full_name,
+    detail: lastApptLabel(c.last_appointment_date),
+  }));
+  clients.forEach((c) => {
+    const opt = document.createElement('option');
+    opt.value = String(c.id);
+    opt.textContent = c.full_name;
+    recClientSelect.appendChild(opt);
+  });
+  AppCommon.createSearchSelect(recClientSelect, items, { placeholder: 'Search patient…' });
+
+  /* Populate therapist select */
+  if (isAdmin && recTherapistSelect) {
+    recTherapistSelect.innerHTML = '<option value="" selected disabled>Select a therapist</option>';
+    const mainTherapist = document.getElementById('therapistId');
+    [...mainTherapist.options].forEach((opt) => {
+      recTherapistSelect.appendChild(opt.cloneNode(true));
+    });
+  }
+
+  /* Auto-fill address on client change */
+  recClientSelect.addEventListener('change', () => {
+    const clientId = Number(recClientSelect.value);
+    if (clientId && clientsById.has(clientId)) {
+      recAddress.value = clientsById.get(clientId).address || '';
+    }
+  });
+
+  /* Set default dates */
+  const today = new Date();
+  recStartDate.value = today.toISOString().slice(0, 10);
+  const threeMonths = new Date(today);
+  threeMonths.setMonth(threeMonths.getMonth() + 3);
+  recEndDate.value = threeMonths.toISOString().slice(0, 10);
+
+  /* Tab switching */
+  document.querySelectorAll('.rec-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.rec-tab').forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.tab;
+      document.getElementById('rec-tab-create').style.display = target === 'create' ? '' : 'none';
+      document.getElementById('rec-tab-manage').style.display = target === 'manage' ? '' : 'none';
+      if (target === 'manage') loadRecurrencesList();
+    });
+  });
+
+  /* Open / close drawer */
+  function openRecDrawer() {
+    recOverlay.classList.remove('hidden');
+    recDrawer.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      recOverlay.classList.add('open');
+      recDrawer.classList.add('open');
+      recDrawer.setAttribute('aria-hidden', 'false');
+    });
+  }
+  function closeRecDrawer() {
+    recOverlay.classList.remove('open');
+    recDrawer.classList.remove('open');
+    recDrawer.setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      recOverlay.classList.add('hidden');
+      recDrawer.classList.add('hidden');
+    }, 220);
+  }
+  openRecBtn.addEventListener('click', openRecDrawer);
+  closeRecBtn.addEventListener('click', closeRecDrawer);
+  recOverlay.addEventListener('click', closeRecDrawer);
+
+  /* Preview */
+  previewBtn.addEventListener('click', async () => {
+    const payload = {
+      frequency: recFrequency.value,
+      dayOfWeek: Number(recDayOfWeek.value),
+      timeOfDay: recTime.value,
+      startDate: recStartDate.value,
+      endDate: recEndDate.value,
+    };
+    try {
+      const result = await AppCommon.api('/ALTApi/recurrences/preview', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      previewDates = result.dates || [];
+      renderPreviewChips();
+    } catch (err) {
+      showDialog(err.message, true);
+    }
+  });
+
+  function renderPreviewChips() {
+    previewChips.innerHTML = '';
+    previewDates.forEach((iso) => {
+      const d = new Date(iso);
+      const chip = document.createElement('span');
+      chip.className = 'date-chip';
+      chip.textContent = d.toLocaleString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      previewChips.appendChild(chip);
+    });
+    submitBtn.textContent = `Create ${previewDates.length} Recurring Appointment${previewDates.length !== 1 ? 's' : ''}`;
+    submitBtn.disabled = previewDates.length === 0;
+  }
+
+  /* Submit */
+  recForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (previewDates.length === 0) {
+      showDialog('Please preview the dates before creating.', true);
+      return;
+    }
+    if (!recClientSelect.value) {
+      showDialog('Please select a patient.', true);
+      return;
+    }
+    if (!recAddress.value.trim()) {
+      showDialog('Please enter an address.', true);
+      return;
+    }
+
+    const payload = {
+      clientId: Number(recClientSelect.value),
+      frequency: recFrequency.value,
+      dayOfWeek: Number(recDayOfWeek.value),
+      timeOfDay: recTime.value,
+      startDate: recStartDate.value,
+      endDate: recEndDate.value,
+      address: recAddress.value,
+      durationMinutes: Number(recDuration.value || 60),
+      feeAmount: recFee.value !== '' ? Number(recFee.value) : undefined,
+      paymentType: recPaymentType.value || null,
+      comments: recComments.value || null,
+    };
+
+    if (isAdmin) {
+      if (!recTherapistSelect.value) {
+        showDialog('Please select a therapist.', true);
+        return;
+      }
+      payload.userId = Number(recTherapistSelect.value);
+    }
+
+    try {
+      const result = await AppCommon.api('/ALTApi/recurrences', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      recForm.reset();
+      recDuration.value = '60';
+      recTime.value = '09:00';
+      recStartDate.value = today.toISOString().slice(0, 10);
+      recEndDate.value = threeMonths.toISOString().slice(0, 10);
+      previewDates = [];
+      previewChips.innerHTML = '';
+      submitBtn.textContent = 'Create Recurring Appointments';
+      submitBtn.disabled = true;
+      await loadAppointments();
+      closeRecDrawer();
+      showDialog(`${result.count} recurring appointment${result.count !== 1 ? 's' : ''} created successfully!`);
+    } catch (err) {
+      showDialog(err.message, true);
+    }
+  });
+
+  /* Manage tab: load recurrences list */
+  async function loadRecurrencesList() {
+    try {
+      const recs = await AppCommon.api('/ALTApi/recurrences');
+      if (recs.length === 0) {
+        recurrencesList.innerHTML = '<p style="color:var(--muted);text-align:center;padding:24px 0">No recurring appointments yet.</p>';
+        return;
+      }
+      recurrencesList.innerHTML = '';
+      recs.forEach((r) => {
+        const card = document.createElement('div');
+        card.className = 'rec-card';
+        const freq = r.frequency === 'biweekly' ? 'Every 2 weeks' : r.frequency.charAt(0).toUpperCase() + r.frequency.slice(1);
+        const dayName = DAY_NAMES[r.day_of_week] || '';
+        card.innerHTML = `
+          <div class="rec-card-head">
+            <strong>${r.client_name}</strong>
+            <span class="rec-card-status ${r.status}">${r.status}</span>
+          </div>
+          <div class="rec-card-detail">${freq} on ${dayName}s at ${r.time_of_day}</div>
+          <div class="rec-card-detail">${r.start_date} → ${r.end_date}</div>
+          <div class="rec-card-detail">${r.therapist_name || ''} · ${r.address || ''}</div>
+          ${r.status === 'active' ? '<div class="rec-card-actions"><button type="button" class="outline danger cancel-rec-btn" data-id="' + r.id + '">Cancel Future Appointments</button></div>' : ''}
+        `;
+        recurrencesList.appendChild(card);
+      });
+
+      recurrencesList.querySelectorAll('.cancel-rec-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const recId = btn.dataset.id;
+          if (!confirm('Cancel this recurrence? All future appointments will be deleted. Past appointments are kept.')) return;
+          try {
+            const result = await AppCommon.api(`/ALTApi/recurrences/${recId}/cancel`, {
+              method: 'PATCH',
+            });
+            await loadRecurrencesList();
+            await loadAppointments();
+            showDialog(`Recurrence cancelled. ${result.removedCount} future appointment${result.removedCount !== 1 ? 's' : ''} removed.`);
+          } catch (err) {
+            showDialog(err.message, true);
+          }
+        });
+      });
+    } catch (err) {
+      recurrencesList.innerHTML = '<p style="color:var(--danger)">Failed to load recurrences.</p>';
+    }
+  }
 }
 
 AppCommon.ensureAuth(initPage);
