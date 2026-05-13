@@ -122,7 +122,7 @@ router.get('/', async (_req, res) => {
           user_id,
           MAX(paid_date) AS last_paid_date,
           MAX(covers_until) AS last_covers_until,
-          amount_cents AS last_amount_cents
+          MAX(amount_cents) AS last_amount_cents
         FROM subscription_payments
         GROUP BY user_id
       ) lp ON lp.user_id = u.id
