@@ -7,6 +7,18 @@
   const subDrawerTitle = document.getElementById('sub-drawer-title');
   const closeDrawerBtn = document.getElementById('close-sub-drawer');
 
+  // Report elements
+  const reportYear = document.getElementById('reportYear');
+  const loadReportBtn = document.getElementById('loadReport');
+  const toggleReportBtn = document.getElementById('toggleReport');
+  const reportBody = document.getElementById('report-body');
+  const reportKpis = document.getElementById('reportKpis');
+  const reportMonthlyBody = document.getElementById('report-monthly-body');
+  const reportMonthlyFoot = document.getElementById('report-monthly-foot');
+  const reportOutstandingBody = document.getElementById('report-outstanding-body');
+  const outstandingHeading = document.getElementById('outstanding-heading');
+  const outstandingTable = document.getElementById('outstanding-table');
+
   // Subscription settings
   const subSettingsForm = document.getElementById('sub-settings-form');
   const subUserId = document.getElementById('subUserId');
@@ -153,8 +165,8 @@
         <td>${sub.full_name}</td>
         <td>${price}</td>
         <td><span class="${statusCls}">${statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}</span></td>
-        <td class="small">${formatDate(sub.last_paid_date)}</td>
-        <td class="small">${formatDate(sub.last_covers_until)}</td>
+        <td style="font-size:0.9rem;color:var(--muted);white-space:nowrap">${formatDate(sub.last_paid_date)}</td>
+        <td style="font-size:0.9rem;color:var(--muted);white-space:nowrap">${formatDate(sub.last_covers_until)}</td>
         <td><span class="${balance.cls}">${balance.label}</span></td>
       `;
 
@@ -326,6 +338,122 @@
     });
   }
 
+  /* ── Economic Report ── */
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  let reportVisible = false;
+  let reportLoaded = false;
+
+  toggleReportBtn.addEventListener('click', async () => {
+    reportVisible = !reportVisible;
+    reportBody.style.display = reportVisible ? '' : 'none';
+    toggleReportBtn.textContent = reportVisible ? 'Hide' : 'Show';
+    if (reportVisible && !reportLoaded) {
+      reportLoaded = true;
+      await loadReport();
+    }
+  });
+
+  loadReportBtn.addEventListener('click', () => loadReport());
+
+  async function loadReport() {
+    const year = reportYear.value || new Date().getFullYear();
+    try {
+      const r = await api(`/ALTApi/subscriptions/report?year=${year}`);
+      renderReport(r);
+    } catch (err) {
+      showDialog(err.message, true);
+    }
+  }
+
+  function renderReport(r) {
+    // KPI cards
+    reportKpis.innerHTML = `
+      <div class="rev-kpi">
+        <span class="rev-kpi-label">Active Subscriptions</span>
+        <span class="rev-kpi-val">${r.totalActiveSubs}</span>
+      </div>
+      <div class="rev-kpi">
+        <span class="rev-kpi-label">Expected Monthly</span>
+        <span class="rev-kpi-val">${euroFromCents(r.expectedMonthlyCents)}</span>
+      </div>
+      <div class="rev-kpi rev-kpi--ok">
+        <span class="rev-kpi-label">Received This Month</span>
+        <span class="rev-kpi-val">${euroFromCents(r.receivedThisMonthCents)}</span>
+      </div>
+      <div class="rev-kpi rev-kpi--ok">
+        <span class="rev-kpi-label">Received ${r.year}</span>
+        <span class="rev-kpi-val">${euroFromCents(r.receivedThisYearCents)}</span>
+      </div>
+      <div class="rev-kpi${r.totalOutstandingCents > 0 ? ' rev-kpi--warn' : ' rev-kpi--ok'}">
+        <span class="rev-kpi-label">Outstanding</span>
+        <span class="rev-kpi-val">${r.totalOutstandingCents > 0 ? euroFromCents(r.totalOutstandingCents) : '€0.00'}</span>
+      </div>
+    `;
+
+    // Monthly breakdown
+    reportMonthlyBody.innerHTML = '';
+    let yearTotalCents = 0;
+    let yearTotalPayments = 0;
+
+    r.monthlyBreakdown.forEach((m) => {
+      yearTotalCents += m.totalCents;
+      yearTotalPayments += m.paymentCount;
+
+      const diffCents = m.totalCents - r.expectedMonthlyCents;
+      const diffLabel = r.expectedMonthlyCents === 0 ? '-' :
+        diffCents === 0 ? 'On target' :
+        diffCents > 0 ? `+${euroFromCents(diffCents)}` : euroFromCents(diffCents);
+      const diffCls = diffCents > 0 ? 'status-paid' : diffCents < 0 ? 'status-owed' : '';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${MONTH_NAMES[m.month - 1]} ${r.year}</td>
+        <td>${m.paymentCount}</td>
+        <td>${m.totalCents > 0 ? euroFromCents(m.totalCents) : '-'}</td>
+        <td><span class="${diffCls}">${m.paymentCount > 0 ? diffLabel : '-'}</span></td>
+      `;
+      reportMonthlyBody.appendChild(tr);
+    });
+
+    // Footer totals
+    const expectedYearlyCents = r.expectedMonthlyCents * 12;
+    const yearDiff = yearTotalCents - expectedYearlyCents;
+    const yearDiffLabel = expectedYearlyCents === 0 ? '-' :
+      yearDiff === 0 ? 'On target' :
+      yearDiff > 0 ? `+${euroFromCents(yearDiff)}` : euroFromCents(yearDiff);
+    const yearDiffCls = yearDiff > 0 ? 'status-paid' : yearDiff < 0 ? 'status-owed' : '';
+
+    reportMonthlyFoot.innerHTML = `
+      <tr style="font-weight:700;border-top:2px solid var(--border)">
+        <td>Total ${r.year}</td>
+        <td>${yearTotalPayments}</td>
+        <td>${euroFromCents(yearTotalCents)}</td>
+        <td><span class="${yearDiffCls}">${yearDiffLabel}</span></td>
+      </tr>
+    `;
+
+    // Outstanding details
+    if (r.outstandingDetails.length > 0) {
+      outstandingHeading.classList.remove('hidden');
+      outstandingTable.classList.remove('hidden');
+      reportOutstandingBody.innerHTML = '';
+      r.outstandingDetails.forEach((d) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${d.full_name}</td>
+          <td>${euroFromCents(d.monthly_price_cents)}</td>
+          <td>${d.months_overdue}</td>
+          <td><span class="status-owed">${euroFromCents(d.owed_cents)}</span></td>
+        `;
+        reportOutstandingBody.appendChild(tr);
+      });
+    } else {
+      outstandingHeading.classList.add('hidden');
+      outstandingTable.classList.add('hidden');
+    }
+  }
+
   /* ── Init ── */
   ensureAuth(async () => {
     const user = getUser();
@@ -334,6 +462,7 @@
         '<section class="card"><h2>Access Denied</h2><p>Admin access required.</p></section>';
       return;
     }
+    reportYear.value = new Date().getFullYear();
     await loadSubs();
   });
 })();

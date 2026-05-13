@@ -1,7 +1,22 @@
 {
-  "version": "2.10.0",
+  "version": "2.10.1",
   "releaseDate": "2026-05-13",
   "history": [
+    {
+      "version": "2.10.1",
+      "date": "2026-05-13",
+      "summary": "Subscription economic report, visual fixes, and UX tweaks.",
+      "changes": [
+        "Economic Report section added to Subscriptions page with KPI cards and monthly breakdown",
+        "Report shows active subs, expected monthly, received this month/year, and outstanding amounts",
+        "Monthly breakdown table with payment counts, received amounts, and vs-expected comparison",
+        "Outstanding details table lists overdue therapists with months overdue and owed amount",
+        "Fixed subscription table date columns overlapping (display:block CSS conflict)",
+        "Subscriptions table moved above Economic Report for quicker access",
+        "Economic Report defaults to collapsed — click Show to expand",
+        "Version history / changelog hidden from non-admin users on About page"
+      ]
+    },
     {
       "version": "2.10.0",
       "date": "2026-05-13",

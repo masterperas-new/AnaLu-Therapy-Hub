@@ -78,4 +78,10 @@ async function loadVersion() {
   }
 }
 
-AppCommon.ensureAuth(loadVersion);
+AppCommon.ensureAuth(() => {
+  const user = AppCommon.getUser();
+  loadVersion();
+  if (!user || user.role !== 'admin') {
+    versionHistory.style.display = 'none';
+  }
+});

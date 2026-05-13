@@ -11,6 +11,93 @@ function requireAdmin(req, res, next) {
 
 router.use(requireAdmin);
 
+/* GET /report — economic report for subscriptions */
+router.get('/report', async (req, res) => {
+  const { db } = require('../db/database');
+  try {
+    const year = Number(req.query.year) || new Date().getFullYear();
+
+    // Active subscriptions summary
+    const activeSubs = await db.all(
+      `SELECT s.user_id, u.full_name, s.monthly_price_cents, s.status
+       FROM subscriptions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.status = 'active' AND s.monthly_price_cents > 0`
+    );
+
+    const totalActiveSubs = activeSubs.length;
+    const expectedMonthlyCents = activeSubs.reduce((sum, s) => sum + s.monthly_price_cents, 0);
+
+    // All payments for the year
+    const yearPayments = await db.all(
+      `SELECT sp.user_id, u.full_name, sp.amount_cents, sp.paid_date, sp.covers_until, sp.payment_method
+       FROM subscription_payments sp
+       JOIN users u ON u.id = sp.user_id
+       WHERE sp.paid_date >= $1 AND sp.paid_date <= $2
+       ORDER BY sp.paid_date`,
+      [`${year}-01-01`, `${year}-12-31`]
+    );
+
+    // Received this month and this year
+    const now = new Date();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const currentMonthPrefix = `${now.getFullYear()}-${currentMonth}`;
+
+    const receivedThisYearCents = yearPayments.reduce((sum, p) => sum + p.amount_cents, 0);
+    const receivedThisMonthCents = yearPayments
+      .filter(p => p.paid_date.startsWith(currentMonthPrefix))
+      .reduce((sum, p) => sum + p.amount_cents, 0);
+
+    // Outstanding: for each active sub, check if covers_until is in the past
+    const outstandingDetails = [];
+    for (const sub of activeSubs) {
+      const lastPayment = await db.get(
+        `SELECT MAX(covers_until) AS last_covers_until FROM subscription_payments WHERE user_id = $1`,
+        [sub.user_id]
+      );
+      const coversUntil = lastPayment?.last_covers_until;
+      if (!coversUntil) {
+        // Never paid
+        outstandingDetails.push({ full_name: sub.full_name, monthly_price_cents: sub.monthly_price_cents, months_overdue: 1, owed_cents: sub.monthly_price_cents });
+      } else {
+        const until = new Date(coversUntil + 'T23:59:59');
+        if (until < now) {
+          const todayMonth = now.getFullYear() * 12 + now.getMonth();
+          const untilMonth = until.getFullYear() * 12 + until.getMonth();
+          const monthsOverdue = todayMonth - untilMonth;
+          outstandingDetails.push({ full_name: sub.full_name, monthly_price_cents: sub.monthly_price_cents, months_overdue: monthsOverdue, owed_cents: monthsOverdue * sub.monthly_price_cents });
+        }
+      }
+    }
+    const totalOutstandingCents = outstandingDetails.reduce((sum, d) => sum + d.owed_cents, 0);
+
+    // Monthly breakdown for the year
+    const monthlyBreakdown = [];
+    for (let m = 1; m <= 12; m++) {
+      const mm = String(m).padStart(2, '0');
+      const prefix = `${year}-${mm}`;
+      const monthPayments = yearPayments.filter(p => p.paid_date.startsWith(prefix));
+      const totalCents = monthPayments.reduce((sum, p) => sum + p.amount_cents, 0);
+      const count = monthPayments.length;
+      monthlyBreakdown.push({ month: m, monthLabel: prefix, totalCents, paymentCount: count });
+    }
+
+    return res.json({
+      year,
+      totalActiveSubs,
+      expectedMonthlyCents,
+      receivedThisMonthCents,
+      receivedThisYearCents,
+      totalOutstandingCents,
+      outstandingDetails,
+      monthlyBreakdown,
+    });
+  } catch (err) {
+    console.error('Error generating subscription report:', err);
+    return res.status(500).json({ error: 'Failed to generate report.' });
+  }
+});
+
 /* GET / — list all subscriptions with latest payment info */
 router.get('/', async (_req, res) => {
   const { db } = require('../db/database');

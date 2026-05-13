@@ -53,20 +53,69 @@
             <h2>Subscriptions</h2>
           </div>
 
-          <table class="appt-table">
+          <table class="appt-table" style="table-layout:fixed">
             <thead>
               <tr>
-                <th>Therapist</th>
-                <th>Monthly Price</th>
-                <th>Status</th>
-                <th>Last Payment</th>
-                <th>Paid Until</th>
-                <th>Balance</th>
-                <th></th>
+                <th style="width:18%">Therapist</th>
+                <th style="width:14%">Monthly Price</th>
+                <th style="width:10%">Status</th>
+                <th style="width:16%">Last Payment</th>
+                <th style="width:16%">Paid Until</th>
+                <th style="width:14%">Balance</th>
+                <th style="width:12%"></th>
               </tr>
             </thead>
             <tbody id="subs-table-body"></tbody>
           </table>
+        </section>
+
+        <!-- Economic Report (collapsible, default hidden) -->
+        <section class="card" id="report-section">
+          <div class="results-header" style="margin-bottom:0">
+            <h2 style="margin:0">Economic Report</h2>
+            <div style="display:flex;gap:8px;align-items:end">
+              <div>
+                <label for="reportYear" style="font-size:0.8rem">Year</label>
+                <input id="reportYear" type="number" min="2020" max="2099" style="width:90px" />
+              </div>
+              <button type="button" id="loadReport" class="outline">Load</button>
+              <button type="button" id="toggleReport" class="outline">Show</button>
+            </div>
+          </div>
+          <div id="report-body" style="display:none">
+            <div id="reportKpis" class="revenue-kpis" style="margin-top:12px"></div>
+
+            <h3 style="margin:16px 0 8px">Monthly Breakdown</h3>
+            <div style="overflow-x:auto">
+              <table class="appt-table" style="table-layout:fixed">
+                <thead>
+                  <tr>
+                    <th style="width:30%">Month</th>
+                    <th style="width:25%">Payments</th>
+                    <th style="width:25%">Received</th>
+                    <th style="width:20%">vs Expected</th>
+                  </tr>
+                </thead>
+                <tbody id="report-monthly-body"></tbody>
+                <tfoot id="report-monthly-foot"></tfoot>
+              </table>
+            </div>
+
+            <h3 style="margin:16px 0 8px" id="outstanding-heading" class="hidden">Outstanding Details</h3>
+            <div style="overflow-x:auto">
+              <table class="appt-table hidden" id="outstanding-table" style="table-layout:fixed">
+                <thead>
+                  <tr>
+                    <th style="width:35%">Therapist</th>
+                    <th style="width:25%">Monthly Price</th>
+                    <th style="width:15%">Months Overdue</th>
+                    <th style="width:25%">Owed</th>
+                  </tr>
+                </thead>
+                <tbody id="report-outstanding-body"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- Subscription detail drawer -->
