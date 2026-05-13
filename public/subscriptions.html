@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnaLu Therapy Hub - Subscriptions</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/app-shell.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="app-header">
+        <svg class="app-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="30" fill="currentColor" fill-opacity=".1" stroke="currentColor" stroke-width="2"/>
+          <path d="M32 14v36M22 24c0-6 20-6 20 0M16 34c0 10 8 16 16 16s16-6 16-16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <rect x="28" y="22" width="8" height="20" rx="2" fill="currentColor" opacity=".15"/>
+          <rect x="22" y="28" width="20" height="8" rx="2" fill="currentColor" opacity=".15"/>
+        </svg>
+        <div class="app-header-text">
+          <h1 class="app-title">AnaLu Therapy Hub</h1>
+          <p class="page-subtitle">Subscriptions</p>
+        </div>
+        <div id="user-status" class="user-status hidden">
+          <span id="env-badge" class="env-badge"></span>
+        </div>
+      </header>
+
+      <nav class="main-nav">
+        <a href="/index.html">Schedule Hub</a>
+        <a href="/appointments.html">Appointment Management</a>
+        <a href="/patients.html">Patient Registry</a>
+        <a href="/revenue.html" data-therapist-only>Revenue Control</a>
+        <a href="/subscriptions.html" data-admin-only>Subscriptions</a>
+        <a href="/settings.html" data-admin-only>Configuration</a>
+        <a href="/users.html" data-admin-only>User Management</a>
+        <a href="/about.html" class="nav-right">About</a>
+      </nav>
+
+      <section id="login-view" class="card stack">
+        <h2>Secure Access</h2>
+        <form id="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" required autocomplete="username" />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+          <button type="submit">Sign In</button>
+        </form>
+      </section>
+
+      <section id="app-content" class="hidden stack">
+        <section class="card">
+          <div class="results-header">
+            <h2>Subscriptions</h2>
+          </div>
+
+          <table class="appt-table">
+            <thead>
+              <tr>
+                <th>Therapist</th>
+                <th>Monthly Price</th>
+                <th>Status</th>
+                <th>Last Payment</th>
+                <th>Paid Until</th>
+                <th>Balance</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="subs-table-body"></tbody>
+          </table>
+        </section>
+
+        <!-- Subscription detail drawer -->
+        <div id="sub-overlay" class="editor-overlay hidden"></div>
+        <aside id="sub-drawer" class="editor-drawer hidden" aria-hidden="true" style="max-width:540px">
+          <div class="editor-drawer-head">
+            <h2 id="sub-drawer-title">Subscription</h2>
+            <button type="button" id="close-sub-drawer" class="outline">Close</button>
+          </div>
+
+          <!-- Subscription settings -->
+          <h3 style="margin:0 0 8px">Subscription Settings</h3>
+          <form id="sub-settings-form" class="grid-2" style="margin-bottom:20px">
+            <input id="subUserId" type="hidden" />
+            <div>
+              <label for="subMonthlyPrice">Monthly Price (EUR)</label>
+              <input id="subMonthlyPrice" type="number" min="0" step="0.01" required />
+            </div>
+            <div>
+              <label for="subStatus">Status</label>
+              <select id="subStatus">
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label for="subNotes">Notes</label>
+              <input id="subNotes" type="text" />
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="action-create">Save Subscription</button>
+            </div>
+          </form>
+
+          <!-- Record payment -->
+          <h3 style="margin:0 0 8px">Record Payment</h3>
+          <form id="payment-form" class="grid-2" style="margin-bottom:20px">
+            <input id="paymentId" type="hidden" />
+            <div>
+              <label for="payAmount">Amount (EUR)</label>
+              <input id="payAmount" type="number" min="0.01" step="0.01" required />
+            </div>
+            <div>
+              <label for="payDate">Paid Date</label>
+              <input id="payDate" type="date" required />
+            </div>
+            <div>
+              <label for="payCoversUntil">Covers Until</label>
+              <input id="payCoversUntil" type="date" required />
+            </div>
+            <div>
+              <label for="payMethod">Payment Method</label>
+              <select id="payMethod">
+                <option value="">Not set</option>
+                <option value="Cash">Cash</option>
+                <option value="MBWay">MBWay</option>
+                <option value="Card">Card</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label for="payNotes">Notes</label>
+              <input id="payNotes" type="text" />
+            </div>
+            <div style="grid-column: 1 / -1; display:flex; gap:8px">
+              <button type="submit" class="action-create" id="paySubmitBtn">Record Payment</button>
+              <button type="button" id="payCancelEditBtn" class="outline hidden">Cancel Edit</button>
+            </div>
+          </form>
+
+          <!-- Payment history -->
+          <h3 style="margin:0 0 8px">Payment History</h3>
+          <div id="payment-history"></div>
+        </aside>
+      </section>
+
+      <p id="message-banner" class="message-banner"></p>
+    </main>
+    <script src="/common.js"></script>
+    <script src="/subscriptions.js"></script>
+  </body>
+</html>

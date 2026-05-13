@@ -90,9 +90,18 @@
   editorOverlay.addEventListener('click', closeDrawer);
 
   /* ---- load & render ---- */
+  let subsMap = new Map();
+
   async function loadUsers() {
     try {
       allUsers = await api('/ALTApi/users');
+      // Fetch subscription data for the summary column
+      try {
+        const subs = await api('/ALTApi/subscriptions');
+        subsMap = new Map(subs.map((s) => [s.user_id, s]));
+      } catch (_) {
+        subsMap = new Map();
+      }
     } catch (err) {
       setMessage(err.message, true);
       allUsers = [];
@@ -105,7 +114,7 @@
 
     if (!allUsers.length) {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="8" class="small">No users found.</td>';
+      tr.innerHTML = '<td colspan="9" class="small">No users found.</td>';
       usersTableBody.appendChild(tr);
       return;
     }
@@ -130,12 +139,32 @@
         ? new Date(user.last_login).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         : 'Never';
 
+      // Subscription summary
+      let subCell = '<span class="small" style="color:var(--muted)">-</span>';
+      const sub = subsMap.get(user.id);
+      if (sub && sub.monthly_price_cents) {
+        const price = euroFromCents(sub.monthly_price_cents);
+        let badge = '';
+        if (sub.last_covers_until) {
+          const until = new Date(sub.last_covers_until + 'T23:59:59');
+          if (until >= new Date()) {
+            badge = `<span class="status-paid">Paid</span>`;
+          } else {
+            badge = `<span class="status-owed">Overdue</span>`;
+          }
+        } else {
+          badge = '<span class="status-owed">No payments</span>';
+        }
+        subCell = `<span class="small">${price}/mo</span> ${badge}`;
+      }
+
       tr.innerHTML = `
         <td>${escapeHtml(user.full_name)}</td>
         <td>${escapeHtml(user.username)}</td>
         <td>${roleBadge}</td>
         <td>${escapeHtml(user.phone || '-')}</td>
         <td>${statusBadge}</td>
+        <td>${subCell}</td>
         <td class="small">${lastLogin}</td>
         <td class="small">${created}</td>
       `;

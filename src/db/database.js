@@ -334,6 +334,33 @@ async function initializeDatabaseSchema() {
         )
       `);
 
+      // Create subscriptions table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          user_id INTEGER PRIMARY KEY,
+          monthly_price_cents INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'active',
+          notes TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create subscription_payments table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS subscription_payments (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL,
+          amount_cents INTEGER NOT NULL,
+          paid_date TEXT NOT NULL,
+          covers_until TEXT NOT NULL,
+          payment_method TEXT,
+          notes TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
       try {
         await db.run('SET session_replication_role = DEFAULT');
       } catch (_) {
@@ -505,6 +532,33 @@ async function initializeDatabaseSchema() {
           provider_name TEXT NOT NULL,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create subscriptions table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          user_id INTEGER PRIMARY KEY,
+          monthly_price_cents INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'active',
+          notes TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create subscription_payments table
+      await db.run(`
+        CREATE TABLE IF NOT EXISTS subscription_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          amount_cents INTEGER NOT NULL,
+          paid_date TEXT NOT NULL,
+          covers_until TEXT NOT NULL,
+          payment_method TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
     }

@@ -1,7 +1,20 @@
 {
-  "version": "2.9.1",
-  "releaseDate": "2026-05-11",
+  "version": "2.10.0",
+  "releaseDate": "2026-05-13",
   "history": [
+    {
+      "version": "2.10.0",
+      "date": "2026-05-13",
+      "summary": "Subscription Management — track user payments and billing (admin only).",
+      "changes": [
+        "New Subscriptions page for admins to manage therapist billing",
+        "Set a monthly price per therapist and track payment status",
+        "Record payments with amount, date, covers-until period, and payment method",
+        "Edit or delete past payment records at any time",
+        "Subscription column added to User Management showing price and payment status",
+        "Completely hidden from therapists — internal admin tool only"
+      ]
+    },
     {
       "version": "2.9.1",
       "date": "2026-05-11",

@@ -12,6 +12,7 @@ const reportsRouter = require('./routes/reports');
 const settingsRouter = require('./routes/settings');
 const usersRouter = require('./routes/users');
 const recurrencesRouter = require('./routes/recurrences');
+const subscriptionsRouter = require('./routes/subscriptions');
 
 const app = express();
 const port = Number(process.env.PORT) || 8080;
@@ -101,6 +102,7 @@ app.use('/ALTApi/reports', requireAuth, reportsRouter);
 app.use('/ALTApi/settings', requireAuth, settingsRouter);
 app.use('/ALTApi/users', requireAuth, usersRouter);
 app.use('/ALTApi/recurrences', requireAuth, recurrencesRouter);
+app.use('/ALTApi/subscriptions', requireAuth, subscriptionsRouter);
 
 // --- Initialize database, then start server (non-Vercel) ---
 const dbReady = initializeDatabase()
