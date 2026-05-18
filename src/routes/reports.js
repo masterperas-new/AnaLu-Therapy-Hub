@@ -225,4 +225,43 @@ router.get('/future', async (req, res) => {
   }
 });
 
+router.get('/by-client', async (req, res) => {
+  const { db, isPostgres } = require('../db/database');
+  try {
+    const user = req.session.user;
+    if (user.role === 'admin') {
+      return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+    }
+
+    let userFilter = 'WHERE a.user_id = $1';
+    const params = [user.id];
+
+    const dateCompare = isPostgres ? "a.appointment_date::timestamp::date" : "date(a.appointment_date)";
+
+    const sql = `
+      SELECT
+        c.id AS client_id,
+        c.full_name,
+        COUNT(*) AS total_appointments,
+        SUM(CASE WHEN a.wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
+        SUM(CASE WHEN a.wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+        COALESCE(SUM(a.fee_cents), 0) AS total_cents,
+        COALESCE(SUM(CASE WHEN a.wire_received = 1 THEN a.fee_cents ELSE 0 END), 0) AS paid_cents,
+        COALESCE(SUM(CASE WHEN a.wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN a.fee_cents ELSE 0 END), 0) AS owed_cents,
+        MAX(a.appointment_date) AS last_appointment
+      FROM appointments a
+      JOIN clients c ON c.id = a.client_id
+      ${userFilter}
+      GROUP BY c.id, c.full_name
+      ORDER BY c.full_name
+    `;
+
+    const rows = await db.all(sql, params);
+    return res.json(rows);
+  } catch (err) {
+    console.error('Error building by-client report:', err);
+    return res.status(500).json({ error: 'Failed to build client report.' });
+  }
+});
+
 module.exports = router;

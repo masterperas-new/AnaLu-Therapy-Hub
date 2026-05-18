@@ -350,8 +350,10 @@ button.action-delete:hover {
 
 .status-paid { color: var(--ok); font-weight: 700; }
 .status-owed { color: var(--warn); font-weight: 700; }
+.clickable-owed { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.clickable-owed:hover { opacity: 0.7; }
 
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 .message { margin-top: 10px; min-height: 1.1rem; color: var(--muted); }
 .message.error { color: var(--error); }
@@ -773,6 +775,11 @@ button.action-delete:hover {
   outline-offset: -2px;
 }
 
+/* Lock body scroll when any drawer is open */
+body:has(.editor-overlay.open) {
+  overflow: hidden;
+}
+
 .editor-overlay {
   position: fixed;
   inset: 0;
@@ -995,6 +1002,10 @@ button.action-delete:hover {
   .kpis { grid-template-columns: 1fr; }
   .revenue-kpis { grid-template-columns: 1fr; }
   .date-filter-inline { grid-template-columns: 1fr; }
+  .editor-drawer {
+    width: 100vw;
+    border-left: none;
+  }
 }
 
 /* ── Admin badge ── */

@@ -672,9 +672,14 @@ async function initPage() {
   const url = new URL(window.location.href);
   const editId = url.searchParams.get('id');
   if (editId) {
-    await loadAppointmentById(editId);
-    openEditor('Edit Appointment');
-    AppCommon.setMessage('Appointment loaded for editing.');
+    try {
+      await loadAppointmentById(editId);
+      openEditor('Edit Appointment');
+      AppCommon.setMessage('Appointment loaded for editing.');
+    } catch (err) {
+      showDialog(err.message || 'Appointment not found.', true);
+      window.history.replaceState(null, '', '/appointments.html');
+    }
   }
 
   const newForId = url.searchParams.get('newFor');

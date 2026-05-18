@@ -474,6 +474,64 @@
     return { setValue, getValue, setItems, clear, input };
   }
 
+  /**
+   * Export tabular data to an .xls file (XML Spreadsheet 2003 format).
+   * @param {string} filename - e.g. "revenue-clients.xls"
+   * @param {string[]} headers - column headers
+   * @param {Array<Array<string|number>>} rows - 2D array of cell values
+   * @param {string} [title] - optional title row displayed above headers
+   */
+  function exportToXls(filename, headers, rows, title) {
+    const esc = (v) => String(v != null ? v : '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const colCount = headers.length;
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<?mso-application progid="Excel.Sheet"?>\n';
+    xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"';
+    xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+    xml += '<Styles>\n';
+    xml += '  <Style ss:ID="title"><Font ss:Bold="1" ss:Size="12"/></Style>\n';
+    xml += '  <Style ss:ID="header"><Font ss:Bold="1"/><Interior ss:Color="#F0F0F0" ss:Pattern="Solid"/></Style>\n';
+    xml += '  <Style ss:ID="Default" ss:Name="Normal"><Font ss:Size="10"/></Style>\n';
+    xml += '</Styles>\n';
+    xml += '<Worksheet ss:Name="Sheet1">\n<Table>\n';
+
+    if (title) {
+      xml += `<Row><Cell ss:StyleID="title" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(title)}</Data></Cell></Row>\n`;
+      xml += '<Row></Row>\n';
+    }
+
+    xml += '<Row>';
+    headers.forEach(h => { xml += `<Cell ss:StyleID="header"><Data ss:Type="String">${esc(h)}</Data></Cell>`; });
+    xml += '</Row>\n';
+
+    rows.forEach(row => {
+      xml += '<Row>';
+      row.forEach(cell => {
+        const val = cell != null ? cell : '';
+        const isNum = typeof val === 'number' || (typeof val === 'string' && /^\d+(\.\d+)?$/.test(val.trim()) && val.trim() !== '');
+        if (isNum) {
+          xml += `<Cell><Data ss:Type="Number">${val}</Data></Cell>`;
+        } else {
+          xml += `<Cell><Data ss:Type="String">${esc(val)}</Data></Cell>`;
+        }
+      });
+      xml += '</Row>\n';
+    });
+
+    xml += '</Table>\n</Worksheet>\n</Workbook>';
+
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   window.AppCommon = {
     api,
     setMessage,
@@ -484,5 +542,6 @@
     mapsLink,
     attachPasswordStrength,
     createSearchSelect,
+    exportToXls,
   };
 })();

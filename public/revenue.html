@@ -57,6 +57,7 @@
 
         <section class="card">
           <h3 style="margin-bottom:10px">Total Revenue</h3>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">💡 Tip: Click the <strong>Owed</strong> cards to view and manage outstanding payments.</p>
           <div id="totalKpis" class="revenue-kpis"></div>
         </section>
 
@@ -76,6 +77,37 @@
           <div id="futureKpis" class="revenue-kpis"></div>
         </section>
 
+        <!-- Revenue by Client -->
+        <section class="card">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <h3 style="margin:0;flex:1;min-width:120px">Revenue by Client</h3>
+            <button id="clientBackBtn" type="button" class="outline hidden" style="font-size:0.82rem;padding:4px 10px">← All Clients</button>
+            <button id="exportClientBtn" type="button" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export XLS</button>
+          </div>
+          <div style="margin-bottom:12px">
+            <select id="clientRevenueSelect" style="display:none">
+              <option value="">All clients</option>
+            </select>
+          </div>
+          <div id="clientRevenueKpis" class="revenue-kpis hidden" style="margin-bottom:12px"></div>
+          <div style="overflow-x:auto">
+            <table class="appt-table" id="client-revenue-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Appts</th>
+                  <th>Paid</th>
+                  <th>Owed</th>
+                  <th>Total (€)</th>
+                  <th>Paid (€)</th>
+                  <th>Owed (€)</th>
+                </tr>
+              </thead>
+              <tbody id="client-revenue-body"></tbody>
+            </table>
+          </div>
+        </section>
+
       </section>
 
       <!-- Outstanding Payments popup -->
@@ -83,6 +115,7 @@
       <aside id="owed-drawer" class="editor-drawer hidden" aria-hidden="true">
         <div class="editor-drawer-head">
           <h2 id="owed-label">Outstanding Payments</h2>
+          <button type="button" id="exportOwedBtn" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export</button>
           <button type="button" id="close-owed" class="outline">Close</button>
         </div>
         <input id="owedSearch" type="text" placeholder="Search by name, date or notes…" style="margin-bottom:10px" />

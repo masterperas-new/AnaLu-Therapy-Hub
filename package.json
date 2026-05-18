@@ -1,6 +1,6 @@
 {
   "name": "analu-therapy-hub",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "main": "src/server.js",
   "scripts": {
     "dev": "node build-counter.js && nodemon src/server.js",
