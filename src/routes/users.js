@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
   try {
     const rows = await db.all(
-      'SELECT id, username, role, full_name, phone, blocked, last_login, created_at FROM users ORDER BY full_name ASC',
+      'SELECT id, username, role, full_name, phone, language, blocked, last_login, created_at FROM users ORDER BY full_name ASC',
       []
     );
     return res.json(rows);
@@ -54,6 +54,7 @@ router.post('/', async (req, res) => {
   }
 
   const safeRole = role === 'admin' ? 'admin' : 'therapist';
+  const defaultLanguage = safeRole === 'admin' ? 'en' : 'pt-PT';
 
   if (!fullName || !fullName.trim()) {
     return res.status(400).json({ error: 'Full name is required.' });
@@ -63,8 +64,8 @@ router.post('/', async (req, res) => {
 
   try {
     const result = await db.run(
-      'INSERT INTO users (username, password_hash, role, full_name, phone) VALUES ($1, $2, $3, $4, $5)',
-      [username.trim(), hash, safeRole, fullName.trim(), phone || null]
+      'INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)',
+      [username.trim(), hash, safeRole, fullName.trim(), phone || null, defaultLanguage]
     );
 
     return res.status(201).json({ id: result.lastID });
@@ -180,6 +181,29 @@ router.patch('/:id/calendar-view', async (req, res) => {
   } catch (error) {
     console.error('Calendar view save error:', error.message);
     return res.status(500).json({ error: 'Failed to save calendar view.' });
+  }
+});
+
+/* Save language preference */
+router.patch('/:id/language', async (req, res) => {
+  const { db } = require('../db/database');
+
+  const userId = Number(req.params.id);
+  if (req.session.user.id !== userId) {
+    return res.status(403).json({ error: 'You can only change your own language.' });
+  }
+
+  const { language } = req.body;
+  const allowed = ['en', 'pt-PT'];
+  const value = allowed.includes(language) ? language : (req.session.user.role === 'admin' ? 'en' : 'pt-PT');
+
+  try {
+    await db.run('UPDATE users SET language = $1 WHERE id = $2', [value, userId]);
+    req.session.user.language = value;
+    return res.json({ language: value });
+  } catch (error) {
+    console.error('Language save error:', error.message);
+    return res.status(500).json({ error: 'Failed to save language.' });
   }
 });
 

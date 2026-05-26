@@ -13,6 +13,7 @@ router.get('/session', (req, res) => {
         role: req.session.user.role,
         fullName: req.session.user.fullName,
         phone: req.session.user.phone,
+        language: req.session.user.language || (req.session.user.role === 'admin' ? 'en' : 'pt-PT'),
         theme: req.session.user.theme || null,
         calendarView: req.session.user.calendarView || 'week',
       },
@@ -31,7 +32,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await db.get(
-      'SELECT id, username, password_hash, role, full_name, phone, blocked, theme, calendar_view FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, password_hash, role, full_name, phone, language, blocked, theme, calendar_view FROM users WHERE LOWER(username) = LOWER($1)',
       [username]
     );
 
@@ -46,6 +47,14 @@ router.post('/login', async (req, res) => {
     // Record last login timestamp
     await db.run('UPDATE users SET last_login = $1 WHERE id = $2', [new Date().toISOString(), user.id]);
 
+    const effectiveLanguage = user.language && String(user.language).trim()
+      ? user.language
+      : (user.role === 'admin' ? 'en' : 'pt-PT');
+
+    if (!user.language || !String(user.language).trim()) {
+      await db.run('UPDATE users SET language = $1 WHERE id = $2', [effectiveLanguage, user.id]);
+    }
+
     req.session.authenticated = true;
     req.session.user = {
       id: user.id,
@@ -53,6 +62,7 @@ router.post('/login', async (req, res) => {
       role: user.role,
       fullName: user.full_name,
       phone: user.phone,
+      language: effectiveLanguage,
       theme: user.theme || null,
       calendarView: user.calendar_view || 'week',
     };

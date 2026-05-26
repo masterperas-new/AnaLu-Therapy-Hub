@@ -4,10 +4,179 @@
   const appView = document.getElementById('app-content');
 
   let currentUser = null;
+  let currentLanguage = 'pt-PT';
+
+  const I18N = {
+    en: {
+      nav_schedule: 'Schedule Hub',
+      nav_appointments: 'Appointment Management',
+      nav_patients: 'Patient Registry',
+      nav_revenue: 'Revenue Control',
+      nav_subscriptions: 'Subscriptions',
+      nav_configuration: 'Configuration',
+      nav_users: 'User Management',
+      nav_about: 'About',
+      secure_access: 'Secure Access',
+      username: 'Username',
+      password: 'Password',
+      sign_in: 'Sign In',
+      logout: 'Logout',
+      role_admin: 'Admin',
+      role_therapist: 'Therapist',
+      language: 'Language',
+      confirm_payment_title: 'Confirm Payment',
+      confirm_payment_cancel: 'Cancel',
+      confirm_payment_mark_paid: 'Mark as Paid',
+      search_placeholder: 'Search...',
+      no_patients_found: 'No patients found',
+      logged_out: 'Logged out.',
+      logged_in_as: 'Logged in as {name}.',
+      page_schedule: 'Schedule Hub',
+      page_appointments: 'Appointment Management',
+      page_patients: 'Patient Registry',
+      page_revenue: 'Revenue Control',
+      page_configuration: 'Configuration',
+      page_profile: 'My Profile',
+      page_users: 'User Management',
+      page_about: 'About',
+      page_subscriptions: 'Subscriptions',
+    },
+    'pt-PT': {
+      nav_schedule: 'Centro de Agenda',
+      nav_appointments: 'Gestao de Consultas',
+      nav_patients: 'Registo de Pacientes',
+      nav_revenue: 'Controlo de Receita',
+      nav_subscriptions: 'Subscricoes',
+      nav_configuration: 'Configuracao',
+      nav_users: 'Gestao de Utilizadores',
+      nav_about: 'Sobre',
+      secure_access: 'Acesso Seguro',
+      username: 'Utilizador',
+      password: 'Palavra-passe',
+      sign_in: 'Entrar',
+      logout: 'Sair',
+      role_admin: 'Administrador',
+      role_therapist: 'Terapeuta',
+      language: 'Idioma',
+      confirm_payment_title: 'Confirmar Pagamento',
+      confirm_payment_cancel: 'Cancelar',
+      confirm_payment_mark_paid: 'Marcar como Pago',
+      search_placeholder: 'Pesquisar...',
+      no_patients_found: 'Nenhum paciente encontrado',
+      logged_out: 'Sessao terminada.',
+      logged_in_as: 'Sessao iniciada como {name}.',
+      page_schedule: 'Centro de Agenda',
+      page_appointments: 'Gestao de Consultas',
+      page_patients: 'Registo de Pacientes',
+      page_revenue: 'Controlo de Receita',
+      page_configuration: 'Configuracao',
+      page_profile: 'O Meu Perfil',
+      page_users: 'Gestao de Utilizadores',
+      page_about: 'Sobre',
+      page_subscriptions: 'Subscricoes',
+    },
+  };
+
+  const MESSAGE_KEY_MAP = {
+    'Logged out.': 'logged_out',
+    'Configuration saved.': { en: 'Configuration saved.', 'pt-PT': 'Configuracao guardada.' },
+    'Search cleared.': { en: 'Search cleared.', 'pt-PT': 'Pesquisa limpa.' },
+    'Filters cleared.': { en: 'Filters cleared.', 'pt-PT': 'Filtros limpos.' },
+  };
+
+  function normalizeLanguage(lang, roleHint) {
+    if (lang === 'en' || lang === 'pt-PT') return lang;
+    if (roleHint === 'admin') return 'en';
+    return 'pt-PT';
+  }
+
+  function t(key, vars) {
+    const langPack = I18N[currentLanguage] || I18N['pt-PT'];
+    const fallback = I18N.en;
+    let phrase = langPack[key] || fallback[key] || key;
+    if (vars && typeof vars === 'object') {
+      Object.keys(vars).forEach((name) => {
+        phrase = phrase.replace(`{${name}}`, String(vars[name]));
+      });
+    }
+    return phrase;
+  }
+
+  function localeForLanguage() {
+    return currentLanguage === 'pt-PT' ? 'pt-PT' : 'en-GB';
+  }
+
+  function translateMessage(text) {
+    const mapped = MESSAGE_KEY_MAP[text];
+    if (!mapped) return text;
+    if (typeof mapped === 'string') return t(mapped);
+    return mapped[currentLanguage] || mapped.en || text;
+  }
+
+  function applyStaticTranslations() {
+    const navMap = {
+      '/index.html': 'nav_schedule',
+      '/appointments.html': 'nav_appointments',
+      '/patients.html': 'nav_patients',
+      '/revenue.html': 'nav_revenue',
+      '/subscriptions.html': 'nav_subscriptions',
+      '/settings.html': 'nav_configuration',
+      '/users.html': 'nav_users',
+      '/about.html': 'nav_about',
+    };
+
+    document.querySelectorAll('.main-nav a').forEach((a) => {
+      const key = navMap[a.getAttribute('href')];
+      if (key) a.textContent = t(key);
+    });
+
+    const subtitle = document.querySelector('.page-subtitle');
+    if (subtitle) {
+      const pageKey = {
+        '/index.html': 'page_schedule',
+        '/appointments.html': 'page_appointments',
+        '/patients.html': 'page_patients',
+        '/revenue.html': 'page_revenue',
+        '/settings.html': 'page_configuration',
+        '/profile.html': 'page_profile',
+        '/users.html': 'page_users',
+        '/about.html': 'page_about',
+        '/subscriptions.html': 'page_subscriptions',
+        '/': 'page_schedule',
+      }[window.location.pathname];
+      if (pageKey) subtitle.textContent = t(pageKey);
+    }
+
+    const secureAccess = document.querySelector('#login-view h2');
+    if (secureAccess) secureAccess.textContent = t('secure_access');
+
+    const usernameLabel = document.querySelector('#login-form label[for="username"]');
+    if (usernameLabel) usernameLabel.textContent = t('username');
+
+    const passwordLabel = document.querySelector('#login-form label[for="password"]');
+    if (passwordLabel) passwordLabel.textContent = t('password');
+
+    const signInBtn = document.querySelector('#login-form button[type="submit"]');
+    if (signInBtn) signInBtn.textContent = t('sign_in');
+  }
+
+  function setLanguage(lang, { persist = true } = {}) {
+    currentLanguage = normalizeLanguage(lang, currentUser && currentUser.role);
+    if (persist) {
+      localStorage.setItem('analu-language', currentLanguage);
+    }
+    if (currentUser) {
+      currentUser.language = currentLanguage;
+      updateUserStatus();
+    }
+    applyStaticTranslations();
+    loadTheme();
+    tickClock();
+  }
 
   function setMessage(text, isError = false) {
     if (!messageEl) return;
-    messageEl.textContent = text;
+    messageEl.textContent = translateMessage(text);
     messageEl.className = isError ? 'message error' : 'message';
   }
 
@@ -31,7 +200,7 @@
   }
 
   function euroFromCents(cents) {
-    return new Intl.NumberFormat('en-IE', {
+    return new Intl.NumberFormat(localeForLanguage(), {
       style: 'currency',
       currency: 'EUR',
     }).format(Number(cents || 0) / 100);
@@ -86,12 +255,30 @@
   function updateUserStatus() {
     const userStatus = document.getElementById('user-status');
     if (!userStatus || !currentUser) return;
-    const isAdmin = currentUser.role === 'admin';
+    const roleLabel = currentUser.role === 'admin' ? t('role_admin') : t('role_therapist');
+    const selectedLanguage = normalizeLanguage(currentUser.language, currentUser.role);
     userStatus.innerHTML =
       `<span id="env-badge" class="env-badge"></span><a href="/profile.html" class="user-name">${currentUser.fullName}</a>` +
-      `<div class="user-role">${currentUser.role}</div>` +
+      `<div class="user-role">${roleLabel}</div>` +
+      `<div class="user-language"><label for="user-language-select">${t('language')}</label> <select id="user-language-select"><option value="en">EN</option><option value="pt-PT">PT-PT</option></select></div>` +
       `<div class="user-clock" id="live-clock"></div>` +
-      `<button type="button" class="logout-btn">Logout</button>`;
+      `<button type="button" class="logout-btn">${t('logout')}</button>`;
+
+    const languageSelect = userStatus.querySelector('#user-language-select');
+    languageSelect.value = selectedLanguage;
+    languageSelect.addEventListener('change', async () => {
+      const nextLanguage = normalizeLanguage(languageSelect.value, currentUser.role);
+      setLanguage(nextLanguage);
+      try {
+        await api(`/ALTApi/users/${currentUser.id}/language`, {
+          method: 'PATCH',
+          body: JSON.stringify({ language: nextLanguage }),
+        });
+      } catch (error) {
+        setMessage(error.message, true);
+      }
+    });
+
     userStatus.querySelector('.logout-btn').addEventListener('click', async () => {
       try {
         await api('/ALTApi/auth/logout', { method: 'POST' });
@@ -121,8 +308,9 @@
     const el = document.getElementById('live-clock');
     if (!el) return;
     const now = new Date();
-    const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const locale = localeForLanguage();
+    const date = now.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+    const time = now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
     el.textContent = `${date}  ${time}`;
   }
 
@@ -174,12 +362,13 @@
           });
 
           currentUser = result.user;
+          setLanguage(currentUser.language || (currentUser.role === 'admin' ? 'en' : 'pt-PT'));
           loginForm.reset();
           setAuthenticated(true);
           updateNavForRole();
           await loadEnvironmentBadge();
           await onAuthenticated();
-          setMessage(`Logged in as ${currentUser.fullName}.`);
+          setMessage(t('logged_in_as', { name: currentUser.fullName }));
         } catch (error) {
           setMessage(error.message, true);
         }
@@ -196,6 +385,7 @@
       const session = await api('/ALTApi/auth/session');
       if (session.authenticated && session.user) {
         currentUser = session.user;
+        setLanguage(currentUser.language || (currentUser.role === 'admin' ? 'en' : 'pt-PT'));
         setAuthenticated(true);
         updateNavForRole();
         await loadEnvironmentBadge();
@@ -221,11 +411,11 @@
         overlay.className = 'confirm-overlay';
         overlay.innerHTML = `
           <div class="confirm-box">
-            <h3>Confirm Payment</h3>
+            <h3>${t('confirm_payment_title')}</h3>
             <div class="confirm-details"></div>
             <div class="confirm-actions">
-              <button type="button" class="confirm-cancel">Cancel</button>
-              <button type="button" class="confirm-ok">Mark as Paid</button>
+              <button type="button" class="confirm-cancel">${t('confirm_payment_cancel')}</button>
+              <button type="button" class="confirm-ok">${t('confirm_payment_mark_paid')}</button>
             </div>
           </div>`;
         document.body.appendChild(overlay);
@@ -293,11 +483,13 @@
   // Initialize login screen info on page load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
+      setLanguage(localStorage.getItem('analu-language') || 'pt-PT', { persist: false });
       loadVersionInfo();
       loadEnvironmentBadge();
     });
   } else {
     // Already loaded
+    setLanguage(localStorage.getItem('analu-language') || 'pt-PT', { persist: false });
     loadVersionInfo();
     loadEnvironmentBadge();
   }
@@ -329,14 +521,14 @@
    * items: [{ id, label, detail? }]  — detail is optional secondary text
    * Returns { setValue(id), getValue(), setItems(items) }
    */
-  function createSearchSelect(selectEl, items, { placeholder = 'Search…', onChange } = {}) {
+  function createSearchSelect(selectEl, items, { placeholder = null, onChange } = {}) {
     const wrapper = document.createElement('div');
     wrapper.className = 'search-select';
 
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'search-select-input';
-    input.placeholder = placeholder;
+    input.placeholder = placeholder || t('search_placeholder');
     input.autocomplete = 'off';
 
     const dropdown = document.createElement('div');
@@ -359,7 +551,7 @@
       if (!filtered.length) {
         const empty = document.createElement('div');
         empty.className = 'search-select-empty';
-        empty.textContent = 'No patients found';
+        empty.textContent = t('no_patients_found');
         dropdown.appendChild(empty);
         return;
       }
@@ -543,5 +735,8 @@
     attachPasswordStrength,
     createSearchSelect,
     exportToXls,
+    t,
+    setLanguage,
+    getLanguage: () => currentLanguage,
   };
 })();

@@ -171,6 +171,7 @@ async function initializeDatabaseSchema() {
           role TEXT NOT NULL DEFAULT 'therapist',
           full_name TEXT NOT NULL,
           phone TEXT,
+          language TEXT,
           blocked INTEGER NOT NULL DEFAULT 0,
           theme TEXT,
           calendar_view TEXT DEFAULT 'week',
@@ -178,6 +179,13 @@ async function initializeDatabaseSchema() {
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Add language column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE users ADD COLUMN language TEXT`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Add last_login column if missing (migration for existing tables)
       try {
@@ -201,10 +209,15 @@ async function initializeDatabaseSchema() {
       if (!adminUser) {
         const hash = bcrypt.hashSync('NunFurPass', 10);
         await db.run(
-          "INSERT INTO users (username, password_hash, role, full_name, phone) VALUES ($1, $2, $3, $4, $5)",
-          ['NunFur', hash, 'admin', 'Nuno Furtado', null]
+          "INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)",
+          ['NunFur', hash, 'admin', 'Nuno Furtado', null, 'en']
         );
       }
+
+      // Role-based language defaults for legacy rows
+      await db.run(
+        `UPDATE users SET language = CASE WHEN role = 'admin' THEN 'en' ELSE 'pt-PT' END WHERE language IS NULL OR TRIM(language) = ''`
+      );
 
       // Create clients table
       await db.run(`
@@ -386,6 +399,7 @@ async function initializeDatabaseSchema() {
           role TEXT NOT NULL DEFAULT 'therapist',
           full_name TEXT NOT NULL,
           phone TEXT,
+          language TEXT,
           blocked INTEGER NOT NULL DEFAULT 0,
           theme TEXT,
           calendar_view TEXT DEFAULT 'week',
@@ -393,6 +407,13 @@ async function initializeDatabaseSchema() {
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Add language column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE users ADD COLUMN language TEXT`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Add last_login column if missing (migration for existing tables)
       try {
@@ -416,10 +437,15 @@ async function initializeDatabaseSchema() {
       if (!adminUser) {
         const hash = bcrypt.hashSync('NunFurPass', 10);
         await db.run(
-          "INSERT INTO users (username, password_hash, role, full_name, phone) VALUES ($1, $2, $3, $4, $5)",
-          ['NunFur', hash, 'admin', 'Nuno Furtado', null]
+          "INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)",
+          ['NunFur', hash, 'admin', 'Nuno Furtado', null, 'en']
         );
       }
+
+      // Role-based language defaults for legacy rows
+      await db.run(
+        `UPDATE users SET language = CASE WHEN role = 'admin' THEN 'en' ELSE 'pt-PT' END WHERE language IS NULL OR TRIM(language) = ''`
+      );
 
       await db.run(`
         CREATE TABLE IF NOT EXISTS clients (
