@@ -138,6 +138,22 @@ function parseFeeAmount(value) {
 }
 
 let clientSearchSelect = null;
+let clientsById = new Map();
+let defaultFeeCents = 0;
+
+function getClientDefaultFeeCents(clientId) {
+  const client = clientsById.get(Number(clientId));
+  if (!client || client.default_fee_cents === null || client.default_fee_cents === undefined) {
+    return null;
+  }
+  const value = Number(client.default_fee_cents);
+  return Number.isNaN(value) ? null : value;
+}
+
+function getEffectiveDefaultFeeCents(clientId) {
+  const patientDefault = getClientDefaultFeeCents(clientId);
+  return patientDefault !== null ? patientDefault : defaultFeeCents;
+}
 
 function lastApptLabel(date) {
   if (!date) return 'No appointments yet';
@@ -196,13 +212,16 @@ async function loadClients() {
 clientSelect.addEventListener('change', () => {
   const clientId = Number(clientSelect.value);
   if (clientId && clientsById.has(clientId)) {
-    document.getElementById('address').value = clientsById.get(clientId).address || '';
+    const client = clientsById.get(clientId);
+    document.getElementById('address').value = client.address || '';
+    feeInput.value = (getEffectiveDefaultFeeCents(clientId) / 100).toFixed(2);
   }
 });
 
 async function loadSettings() {
   const settings = await AppCommon.api('/ALTApi/settings');
-  feeInput.placeholder = (settings.defaultFeeCents / 100).toFixed(2);
+  defaultFeeCents = Number(settings.defaultFeeCents || 0);
+  feeInput.placeholder = (defaultFeeCents / 100).toFixed(2);
 }
 
 async function loadTherapists() {

@@ -32,6 +32,85 @@ async function getDefaultFeeCents() {
   }
 }
 
+async function getClientDefaultFeeCents(clientId) {
+  const { db } = require("../db/database");
+  const row = await db.get(
+    'SELECT default_fee_cents FROM clients WHERE id = $1',
+    [Number(clientId)]
+  );
+  if (!row || row.default_fee_cents === null || row.default_fee_cents === undefined) {
+    return null;
+  }
+  const value = Number(row.default_fee_cents);
+  return Number.isNaN(value) ? null : value;
+}
+
+async function resolveFeeCents(clientId, feeAmount) {
+  const feeProvided = feeAmount !== undefined && feeAmount !== null && feeAmount !== '';
+  if (feeProvided) {
+    const feeCents = Math.round(Number(feeAmount) * 100);
+    if (Number.isNaN(feeCents) || feeCents < 0) {
+      throw new Error('Fee must be a non-negative number.');
+    }
+    return feeCents;
+  }
+
+  const clientDefault = await getClientDefaultFeeCents(clientId);
+  if (clientDefault !== null) {
+    return clientDefault;
+  }
+  return getDefaultFeeCents();
+}
+
+async function ensureClientForTherapist(clientId, therapistUserId) {
+  const { db } = require("../db/database");
+  const sourceClient = await db.get(
+    `
+      SELECT id, full_name, condition_notes, phone, email, address, default_fee_cents, nif, created_by
+      FROM clients
+      WHERE id = $1
+    `,
+    [Number(clientId)]
+  );
+
+  if (!sourceClient) {
+    throw new Error('Client not found.');
+  }
+
+  if (Number(sourceClient.created_by) === Number(therapistUserId)) {
+    return Number(sourceClient.id);
+  }
+
+  const result = await db.run(
+    `
+      INSERT INTO clients (
+        full_name,
+        condition_notes,
+        phone,
+        email,
+        address,
+        default_fee_cents,
+        nif,
+        created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `,
+    [
+      sourceClient.full_name,
+      sourceClient.condition_notes,
+      sourceClient.phone || null,
+      sourceClient.email || null,
+      sourceClient.address || null,
+      sourceClient.default_fee_cents === undefined ? null : sourceClient.default_fee_cents,
+      sourceClient.nif || null,
+      Number(therapistUserId),
+    ]
+  );
+
+  return Number(result.lastID);
+}
+
 router.get('/', async (req, res) => {
   const { db } = require("../db/database");
   try {
@@ -205,7 +284,6 @@ router.post('/', async (req, res) => {
     const user = req.session.user;
     const safeDuration = durationMinutes === undefined ? 60 : Number(durationMinutes);
     const safePaymentType = paymentType || null;
-    const feeProvided = feeAmount !== undefined && feeAmount !== null && feeAmount !== '';
 
     if (!clientId || !appointmentDate || !address || !address.trim()) {
       return res.status(400).json({ error: 'Client, date, and address are required.' });
@@ -229,19 +307,21 @@ router.post('/', async (req, res) => {
       assignedUserId = user.id;
     }
 
-    /* Block payment on future appointments */
-    const isFuture = new Date(appointmentDate) > new Date();
-    const paid = (wireReceived && !isFuture) ? 1 : 0;
+    let effectiveClientId;
+    try {
+      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId);
+    } catch (clientErr) {
+      return res.status(400).json({ error: clientErr.message });
+    }
+
+    const paid = wireReceived ? 1 : 0;
     const paidDate = paid ? new Date().toISOString() : null;
 
     let feeCents;
-    if (feeProvided) {
-      feeCents = Math.round(Number(feeAmount) * 100);
-      if (Number.isNaN(feeCents) || feeCents < 0) {
-        return res.status(400).json({ error: 'Fee must be a non-negative number.' });
-      }
-    } else {
-      feeCents = await getDefaultFeeCents();
+    try {
+      feeCents = await resolveFeeCents(effectiveClientId, feeAmount);
+    } catch (feeErr) {
+      return res.status(400).json({ error: feeErr.message });
     }
 
     const sql = `
@@ -265,7 +345,7 @@ router.post('/', async (req, res) => {
     const result = await db.run(
       sql,
       [
-        Number(clientId),
+        effectiveClientId,
         assignedUserId,
         appointmentDate,
         address.trim(),
@@ -321,7 +401,6 @@ router.post('/batch', async (req, res) => {
     }
 
     const safePaymentType = paymentType || null;
-    const feeProvided = feeAmount !== undefined && feeAmount !== null && feeAmount !== '';
 
     let assignedUserId;
     if (user.role === 'admin') {
@@ -336,14 +415,18 @@ router.post('/batch', async (req, res) => {
       assignedUserId = user.id;
     }
 
+    let effectiveClientId;
+    try {
+      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId);
+    } catch (clientErr) {
+      return res.status(400).json({ error: clientErr.message });
+    }
+
     let feeCents;
-    if (feeProvided) {
-      feeCents = Math.round(Number(feeAmount) * 100);
-      if (Number.isNaN(feeCents) || feeCents < 0) {
-        return res.status(400).json({ error: 'Fee must be a non-negative number.' });
-      }
-    } else {
-      feeCents = await getDefaultFeeCents();
+    try {
+      feeCents = await resolveFeeCents(effectiveClientId, feeAmount);
+    } catch (feeErr) {
+      return res.status(400).json({ error: feeErr.message });
     }
 
     const sql = `
@@ -357,12 +440,11 @@ router.post('/batch', async (req, res) => {
 
     const ids = [];
     for (const dateStr of appointmentDates) {
-      const isFuture = new Date(dateStr) > new Date();
-      const paid = (wireReceived && !isFuture) ? 1 : 0;
+      const paid = wireReceived ? 1 : 0;
       const paidDate = paid ? new Date().toISOString() : null;
 
       const result = await db.run(sql, [
-        Number(clientId), assignedUserId, dateStr, address.trim(), feeCents,
+        effectiveClientId, assignedUserId, dateStr, address.trim(), feeCents,
         safeDuration, comments || null, comments || null, paid, paidDate, safePaymentType,
       ]);
       ids.push(result.id);
@@ -392,7 +474,6 @@ router.put('/:id', async (req, res) => {
       userId,
     } = req.body;
 
-    const feeCents = Math.round(Number(feeAmount) * 100);
     const safeDuration = Number(durationMinutes);
     const safePaymentType = paymentType || null;
 
@@ -404,29 +485,57 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Client, date, and address are required.' });
     }
 
-    if (Number.isNaN(feeCents) || feeCents < 0) {
-      return res.status(400).json({ error: 'Fee must be a non-negative number.' });
-    }
-
     if (Number.isNaN(safeDuration) || safeDuration <= 0) {
       return res.status(400).json({ error: 'Duration must be a positive number of minutes.' });
     }
 
-    /* Block payment on future appointments */
-    const isFuture = new Date(appointmentDate) > new Date();
-    if (wireReceived && isFuture) {
-      return res.status(400).json({ error: 'Future appointments cannot be marked as paid.' });
+    const fetchParams = [appointmentId];
+    let fetchUserFilter = '';
+    if (user.role !== 'admin') {
+      fetchUserFilter = ' AND user_id = $2';
+      fetchParams.push(user.id);
     }
-    const paid = wireReceived ? 1 : 0;
-    const paidDate = paid ? new Date().toISOString() : null;
 
-    /* Admin can reassign therapist; therapist can only edit own */
-    // userFilter will be calculated after determining final param index
+    const existing = await db.get(
+      `SELECT id, user_id FROM appointments WHERE id = $1${fetchUserFilter}`,
+      fetchParams
+    );
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Appointment not found.' });
+    }
+
+    let targetUserId;
     const assignedUserId = (user.role === 'admin' && userId) ? Number(userId) : null;
-
     if (assignedUserId && assignedUserId === user.id) {
       return res.status(400).json({ error: 'Admin cannot be assigned appointments.' });
     }
+
+    if (user.role === 'admin') {
+      targetUserId = assignedUserId || Number(existing.user_id);
+      if (!targetUserId) {
+        return res.status(400).json({ error: 'Select a therapist for this appointment.' });
+      }
+    } else {
+      targetUserId = user.id;
+    }
+
+    let effectiveClientId;
+    try {
+      effectiveClientId = await ensureClientForTherapist(clientId, targetUserId);
+    } catch (clientErr) {
+      return res.status(400).json({ error: clientErr.message });
+    }
+
+    let feeCents;
+    try {
+      feeCents = await resolveFeeCents(effectiveClientId, feeAmount);
+    } catch (feeErr) {
+      return res.status(400).json({ error: feeErr.message });
+    }
+
+    const paid = wireReceived ? 1 : 0;
+    const paidDate = paid ? new Date().toISOString() : null;
 
     const setCols = [
       'client_id = $1',
@@ -441,7 +550,7 @@ router.put('/:id', async (req, res) => {
       'payment_type = $10',
     ];
     const updateParams = [
-      Number(clientId),
+      effectiveClientId,
       appointmentDate,
       address.trim(),
       feeCents,
@@ -493,23 +602,6 @@ router.patch('/:id/payment-received', async (req, res) => {
     const body = req.body || {};
     const paymentDate = new Date().toISOString();
     const safePaymentType = body.paymentType || null;
-
-    /* Block payment on future appointments */
-    const userCheckFilter = user.role !== 'admin' ? `AND user_id = $2` : '';
-    const checkParams = user.role !== 'admin' ? [id, user.id] : [id];
-
-    const checkRow = await db.get(
-      `SELECT appointment_date FROM appointments WHERE id = $1 ${userCheckFilter}`,
-      checkParams
-    );
-
-    if (!checkRow) {
-      return res.status(404).json({ error: 'Appointment not found.' });
-    }
-
-    if (new Date(checkRow.appointment_date) > new Date()) {
-      return res.status(400).json({ error: 'Future appointments cannot be marked as paid.' });
-    }
 
     const userFilter = user.role !== 'admin' ? `AND user_id = $4` : '';
     const params = [paymentDate, safePaymentType, id];

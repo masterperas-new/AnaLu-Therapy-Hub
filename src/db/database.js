@@ -215,12 +215,20 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           email TEXT,
           address TEXT,
+          default_fee_cents INTEGER,
           nif TEXT,
           created_by INTEGER,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
       `);
+
+      // Add default_fee_cents column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE clients ADD COLUMN default_fee_cents INTEGER`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Add nif column if missing (migration for existing tables)
       try {
@@ -421,12 +429,20 @@ async function initializeDatabaseSchema() {
           phone TEXT,
           email TEXT,
           address TEXT,
+          default_fee_cents INTEGER,
           nif TEXT,
           created_by INTEGER,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
       `);
+
+      // Add default_fee_cents column if missing (migration for existing tables)
+      try {
+        await db.run(`ALTER TABLE clients ADD COLUMN default_fee_cents INTEGER`);
+      } catch (_) {
+        // Column already exists — ignore
+      }
 
       // Add nif column if missing (migration for existing tables)
       try {
@@ -562,10 +578,106 @@ async function initializeDatabaseSchema() {
         )
       `);
     }
+
+    await normalizePatientOwnershipByTherapist();
   } catch (err) {
     console.error('Database initialization error:', err.message);
     throw err;
   }
+}
+
+async function normalizePatientOwnershipByTherapist() {
+  const mismatches = await db.all(
+    `
+      SELECT DISTINCT
+        a.client_id AS source_client_id,
+        a.user_id AS therapist_id,
+        c.full_name,
+        c.condition_notes,
+        c.phone,
+        c.email,
+        c.address,
+        c.default_fee_cents,
+        c.nif
+      FROM appointments a
+      JOIN clients c ON c.id = a.client_id
+      WHERE a.user_id IS NOT NULL
+        AND (c.created_by IS NULL OR c.created_by <> a.user_id)
+    `
+  );
+
+  if (!mismatches.length) {
+    return;
+  }
+
+  let fixedPairs = 0;
+  for (const row of mismatches) {
+    const createResult = await db.run(
+      `
+        INSERT INTO clients (
+          full_name,
+          condition_notes,
+          phone,
+          email,
+          address,
+          default_fee_cents,
+          nif,
+          created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
+      `,
+      [
+        row.full_name,
+        row.condition_notes,
+        row.phone || null,
+        row.email || null,
+        row.address || null,
+        row.default_fee_cents === undefined ? null : row.default_fee_cents,
+        row.nif || null,
+        row.therapist_id,
+      ]
+    );
+
+    const newClientId = Number(createResult.lastID);
+
+    // Copy comments and insurances to preserve therapist context.
+    const comments = await db.all(
+      'SELECT comment_date, body FROM patient_comments WHERE client_id = $1',
+      [row.source_client_id]
+    );
+    for (const comment of comments) {
+      await db.run(
+        'INSERT INTO patient_comments (client_id, comment_date, body) VALUES ($1, $2, $3)',
+        [newClientId, comment.comment_date, comment.body]
+      );
+    }
+
+    const insurances = await db.all(
+      'SELECT insurance_name, policy_number, provider_name FROM patient_insurances WHERE client_id = $1',
+      [row.source_client_id]
+    );
+    for (const insurance of insurances) {
+      await db.run(
+        'INSERT INTO patient_insurances (client_id, insurance_name, policy_number, provider_name) VALUES ($1, $2, $3, $4)',
+        [newClientId, insurance.insurance_name, insurance.policy_number, insurance.provider_name]
+      );
+    }
+
+    await db.run(
+      'UPDATE appointments SET client_id = $1 WHERE client_id = $2 AND user_id = $3',
+      [newClientId, row.source_client_id, row.therapist_id]
+    );
+
+    await db.run(
+      'UPDATE recurrences SET client_id = $1 WHERE client_id = $2 AND user_id = $3',
+      [newClientId, row.source_client_id, row.therapist_id]
+    );
+
+    fixedPairs += 1;
+  }
+
+  console.log(`[DB] Normalized patient ownership for ${fixedPairs} therapist/client pair(s).`);
 }
 
 module.exports = {

@@ -206,6 +206,9 @@ function openEditPatient(client) {
   document.getElementById('phone').value = client.phone || '';
   document.getElementById('email').value = client.email || '';
   document.getElementById('patientAddress').value = client.address || '';
+  document.getElementById('defaultFeeAmount').value = client.default_fee_cents === null || client.default_fee_cents === undefined
+    ? ''
+    : (Number(client.default_fee_cents) / 100).toFixed(2);
   document.getElementById('nif').value = client.nif || '';
   document.getElementById('conditionNotes').value = client.condition_notes;
   nifError.classList.add('hidden');
@@ -235,6 +238,7 @@ clientForm.addEventListener('submit', async (event) => {
     phone: document.getElementById('phone').value,
     email: document.getElementById('email').value,
     address: document.getElementById('patientAddress').value,
+    defaultFeeAmount: document.getElementById('defaultFeeAmount').value,
     nif: document.getElementById('nif').value.trim(),
   };
 
@@ -607,7 +611,7 @@ function renderHistoryTable(filter) {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
 
-    if (!isAdmin && !row.wire_received && new Date(row.appointment_date) <= new Date()) {
+    if (!isAdmin && !row.wire_received) {
       const payBtn = document.createElement('button');
       payBtn.type = 'button';
       payBtn.className = 'outline tiny-btn';

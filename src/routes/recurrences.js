@@ -1,6 +1,83 @@
 const express = require('express');
 const router = express.Router();
 
+async function getDefaultFeeCents() {
+  const { db } = require('../db/database');
+  const row = await db.get(
+    'SELECT value FROM settings WHERE key = $1',
+    ['default_fee_cents']
+  );
+  return Number(row?.value || 0);
+}
+
+async function resolveFeeCents(clientId, feeAmount) {
+  const { db } = require('../db/database');
+  if (feeAmount !== undefined && feeAmount !== null && feeAmount !== '') {
+    const feeCents = Math.round(Number(feeAmount) * 100);
+    if (Number.isNaN(feeCents) || feeCents < 0) {
+      throw new Error('Fee must be a non-negative number.');
+    }
+    return feeCents;
+  }
+
+  const client = await db.get('SELECT default_fee_cents FROM clients WHERE id = $1', [Number(clientId)]);
+  const patientDefault = Number(client?.default_fee_cents);
+  if (!Number.isNaN(patientDefault) && client?.default_fee_cents !== null && client?.default_fee_cents !== undefined) {
+    return patientDefault;
+  }
+
+  return getDefaultFeeCents();
+}
+
+async function ensureClientForTherapist(clientId, therapistUserId) {
+  const { db } = require('../db/database');
+  const sourceClient = await db.get(
+    `
+      SELECT id, full_name, condition_notes, phone, email, address, default_fee_cents, nif, created_by
+      FROM clients
+      WHERE id = $1
+    `,
+    [Number(clientId)]
+  );
+
+  if (!sourceClient) {
+    throw new Error('Client not found.');
+  }
+
+  if (Number(sourceClient.created_by) === Number(therapistUserId)) {
+    return Number(sourceClient.id);
+  }
+
+  const result = await db.run(
+    `
+      INSERT INTO clients (
+        full_name,
+        condition_notes,
+        phone,
+        email,
+        address,
+        default_fee_cents,
+        nif,
+        created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `,
+    [
+      sourceClient.full_name,
+      sourceClient.condition_notes,
+      sourceClient.phone || null,
+      sourceClient.email || null,
+      sourceClient.address || null,
+      sourceClient.default_fee_cents === undefined ? null : sourceClient.default_fee_cents,
+      sourceClient.nif || null,
+      Number(therapistUserId),
+    ]
+  );
+
+  return Number(result.lastID);
+}
+
 /* Helper: generate dates for a recurrence pattern */
 function generateDates(frequency, dayOfWeek, timeOfDay, startDate, endDate) {
   const dates = [];
@@ -126,16 +203,19 @@ router.post('/', async (req, res) => {
       assignedUserId = user.id;
     }
 
-    // Resolve fee
+    let effectiveClientId;
+    try {
+      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId);
+    } catch (clientErr) {
+      return res.status(400).json({ error: clientErr.message });
+    }
+
+    // Resolve fee: explicit value -> patient default -> app default
     let feeCents;
-    if (feeAmount !== undefined && feeAmount !== null && feeAmount !== '') {
-      feeCents = Math.round(Number(feeAmount) * 100);
-      if (Number.isNaN(feeCents) || feeCents < 0) {
-        return res.status(400).json({ error: 'Fee must be a non-negative number.' });
-      }
-    } else {
-      const setting = await db.get("SELECT value FROM settings WHERE key = $1", ['default_fee_cents']);
-      feeCents = setting ? Number(setting.value) : 6000;
+    try {
+      feeCents = await resolveFeeCents(effectiveClientId, feeAmount);
+    } catch (feeErr) {
+      return res.status(400).json({ error: feeErr.message });
     }
 
     // Generate dates
@@ -156,7 +236,7 @@ router.post('/', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING id
     `, [
-      Number(clientId), assignedUserId, frequency, Number(dayOfWeek), timeOfDay,
+      effectiveClientId, assignedUserId, frequency, Number(dayOfWeek), timeOfDay,
       startDate, endDate, address.trim(), safeDuration, feeCents,
       safePaymentType, comments || null, 'active',
     ]);
@@ -176,7 +256,7 @@ router.post('/', async (req, res) => {
     const ids = [];
     for (const date of dates) {
       const result = await db.run(apptSql, [
-        Number(clientId), assignedUserId, date.toISOString(), address.trim(), feeCents,
+        effectiveClientId, assignedUserId, date.toISOString(), address.trim(), feeCents,
         safeDuration, comments || null, comments || null, 0, null,
         safePaymentType, recurrenceId,
       ]);

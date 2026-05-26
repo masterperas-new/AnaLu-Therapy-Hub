@@ -115,6 +115,10 @@
               <input id="email" name="email" type="email" />
             </div>
             <div>
+              <label for="defaultFeeAmount">Default Fee (EUR)</label>
+              <input id="defaultFeeAmount" name="defaultFeeAmount" type="number" min="0" step="0.01" placeholder="Use app default" />
+            </div>
+            <div>
               <label for="nif">NIF</label>
               <input id="nif" name="nif" type="text" maxlength="9" pattern="\d{9}" placeholder="123456789" />
               <small id="nif-error" class="field-error hidden" style="color:var(--danger,#c00);font-size:0.75rem">Invalid NIF check digit</small>

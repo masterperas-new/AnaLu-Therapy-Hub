@@ -316,15 +316,60 @@ const clientRevenueSelect = document.getElementById('clientRevenueSelect');
 const clientRevenueKpis = document.getElementById('clientRevenueKpis');
 const clientRevenueBody = document.getElementById('client-revenue-body');
 const clientBackBtn = document.getElementById('clientBackBtn');
+const clientDrilldown = document.getElementById('client-drilldown');
+const clientDrilldownTitle = document.getElementById('client-drilldown-title');
+const clientDrilldownBody = document.getElementById('client-drilldown-body');
 
 let allClientRevenue = [];
 let clientSearchSelect = null;
+
+function hideClientDrilldown() {
+  clientDrilldown.classList.add('hidden');
+  clientDrilldownTitle.textContent = 'Appointments';
+  clientDrilldownBody.innerHTML = '';
+}
+
+async function loadClientDrilldown(clientRow) {
+  if (!clientRow) {
+    hideClientDrilldown();
+    return;
+  }
+
+  clientDrilldown.classList.remove('hidden');
+  clientDrilldownTitle.textContent = `Appointments — ${clientRow.full_name}`;
+  clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Loading...</td></tr>';
+
+  try {
+    const rows = await AppCommon.api(`/ALTApi/appointments?clientId=${clientRow.client_id}`);
+    if (!rows.length) {
+      clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No appointments for this patient.</td></tr>';
+      return;
+    }
+
+    clientDrilldownBody.innerHTML = '';
+    rows.forEach((a) => {
+      const tr = document.createElement('tr');
+      const status = a.wire_received ? '<span class="status-paid">PAID</span>' : '<span class="status-owed">OWED</span>';
+      tr.innerHTML = `
+        <td>${new Date(a.appointment_date).toLocaleString('en-GB')}</td>
+        <td>${status}</td>
+        <td>${AppCommon.euroFromCents(a.fee_cents)}</td>
+        <td>${a.payment_type || '-'}</td>
+        <td>${a.comments || a.notes || '-'}</td>
+      `;
+      clientDrilldownBody.appendChild(tr);
+    });
+  } catch (err) {
+    clientDrilldownBody.innerHTML = `<tr><td colspan="5" style="color:var(--danger)">${err.message}</td></tr>`;
+  }
+}
 
 function showAllClients() {
   if (clientSearchSelect) clientSearchSelect.clear();
   renderClientTable(allClientRevenue);
   clientRevenueKpis.classList.add('hidden');
   clientBackBtn.classList.add('hidden');
+  hideClientDrilldown();
 }
 
 clientBackBtn.addEventListener('click', showAllClients);
@@ -400,6 +445,7 @@ function initClientSearch() {
           renderClientTable(row ? [row] : []);
           renderClientKpis(row);
           clientBackBtn.classList.remove('hidden');
+          loadClientDrilldown(row);
         } else {
           showAllClients();
         }
@@ -485,6 +531,7 @@ function renderClientTable(rows) {
       renderClientTable([r]);
       renderClientKpis(r);
       clientBackBtn.classList.remove('hidden');
+      loadClientDrilldown(r);
     });
     clientRevenueBody.appendChild(tr);
   });

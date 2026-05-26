@@ -42,6 +42,25 @@ let sortState = { key: 'appointment_date', dir: 'desc' };
 let isAdmin = false;
 let therapists = [];
 let clientSearchSelect = null;
+let loadedAppointmentSnapshot = null;
+
+function getClientDefaultFeeCents(clientId) {
+  const client = clientsById.get(Number(clientId));
+  if (!client || client.default_fee_cents === null || client.default_fee_cents === undefined) {
+    return null;
+  }
+  const value = Number(client.default_fee_cents);
+  return Number.isNaN(value) ? null : value;
+}
+
+function getEffectiveDefaultFeeCents(clientId) {
+  const patientDefault = getClientDefaultFeeCents(clientId);
+  return patientDefault !== null ? patientDefault : defaultFeeCents;
+}
+
+function setFeeInputFromClientDefault(clientId) {
+  feeInput.value = (getEffectiveDefaultFeeCents(clientId) / 100).toFixed(2);
+}
 
 function lastApptLabel(date) {
   if (!date) return 'No appointments yet';
@@ -62,6 +81,7 @@ function dateToInputValue(isoString) {
 
 function clearForm() {
   appointmentForm.reset();
+  loadedAppointmentSnapshot = null;
   document.getElementById('appointmentId').value = '';
   clientSelect.value = '';
   if (clientSearchSelect) clientSearchSelect.clear();
@@ -146,13 +166,18 @@ clientSelect.addEventListener('change', () => {
   if (clientId && clientsById.has(clientId)) {
     const client = clientsById.get(clientId);
     document.getElementById('address').value = client.address || '';
+    if (!document.getElementById('appointmentId').value) {
+      setFeeInputFromClientDefault(clientId);
+    }
   }
 });
 
 async function loadSettings() {
   const settings = await AppCommon.api('/ALTApi/settings');
   defaultFeeCents = settings.defaultFeeCents;
-  feeInput.value = (defaultFeeCents / 100).toFixed(2);
+  if (!document.getElementById('appointmentId').value && !clientSelect.value) {
+    feeInput.value = (defaultFeeCents / 100).toFixed(2);
+  }
 }
 
 async function loadTherapists() {
@@ -349,7 +374,7 @@ function renderAppointmentsTable(rows) {
     const actionWrap = document.createElement('div');
     actionWrap.style.cssText = 'display:flex;gap:4px;align-items:center';
 
-    if (!isAdmin && !appointment.wire_received && new Date(appointment.appointment_date) <= new Date()) {
+    if (!isAdmin && !appointment.wire_received) {
       const payBtn = document.createElement('button');
       payBtn.type = 'button';
       payBtn.className = 'outline tiny-btn';
@@ -430,6 +455,17 @@ async function loadAppointments() {
 
 async function loadAppointmentById(id) {
   const appointment = await AppCommon.api(`/ALTApi/appointments/${id}`);
+  loadedAppointmentSnapshot = {
+    clientId: Number(appointment.client_id),
+    appointmentDate: new Date(appointment.appointment_date).toISOString(),
+    address: appointment.location || '',
+    durationMinutes: Number(appointment.duration_minutes || 60),
+    feeCents: Number(appointment.fee_cents || 0),
+    comments: appointment.comments || appointment.notes || '',
+    wireReceived: Boolean(appointment.wire_received),
+    paymentType: appointment.payment_type || null,
+    userId: appointment.user_id ? Number(appointment.user_id) : null,
+  };
   document.getElementById('appointmentId').value = String(appointment.id);
   const badge = document.getElementById('recurring-badge');
   if (appointment.recurrence_id) { badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
@@ -440,10 +476,8 @@ async function loadAppointmentById(id) {
   document.getElementById('durationMinutes').value = String(appointment.duration_minutes || 60);
   document.getElementById('feeAmount').value = (Number(appointment.fee_cents || 0) / 100).toFixed(2);
   document.getElementById('wireReceivedEdit').value = appointment.wire_received ? 'true' : 'false';
-  const isFutureAppt = new Date(appointment.appointment_date) > new Date();
   const wireSelect = document.getElementById('wireReceivedEdit');
-  if (isFutureAppt) { wireSelect.value = 'false'; wireSelect.disabled = true; }
-  else { wireSelect.disabled = false; }
+  wireSelect.disabled = false;
   document.getElementById('paymentType').value = appointment.payment_type || '';
   document.getElementById('comments').value = appointment.comments || appointment.notes || '';
   if (isAdmin && therapistSelect) {
@@ -476,7 +510,9 @@ appointmentForm.addEventListener('submit', async (event) => {
     appointmentDate: new Date(document.getElementById('appointmentDate').value).toISOString(),
     address: document.getElementById('address').value,
     durationMinutes: Number(document.getElementById('durationMinutes').value || 60),
-    feeAmount: Number(document.getElementById('feeAmount').value || 0),
+    feeAmount: document.getElementById('feeAmount').value === ''
+      ? null
+      : Number(document.getElementById('feeAmount').value),
     comments: document.getElementById('comments').value,
     wireReceived: document.getElementById('wireReceivedEdit').value === 'true',
     paymentType: document.getElementById('paymentType').value || null,
@@ -489,6 +525,33 @@ appointmentForm.addEventListener('submit', async (event) => {
       return;
     }
     payload.userId = Number(selTherapist);
+  }
+
+  if (id && loadedAppointmentSnapshot) {
+    const currentFeeCents = Math.round(Number(payload.feeAmount || 0) * 100);
+    const currentSnapshot = {
+      clientId: Number(payload.clientId),
+      appointmentDate: payload.appointmentDate,
+      address: payload.address || '',
+      durationMinutes: Number(payload.durationMinutes || 60),
+      feeCents: Number.isNaN(currentFeeCents) ? 0 : currentFeeCents,
+      comments: payload.comments || '',
+      wireReceived: Boolean(payload.wireReceived),
+      paymentType: payload.paymentType || null,
+      userId: payload.userId || null,
+    };
+
+    const isPastAppointment = new Date(loadedAppointmentSnapshot.appointmentDate) < new Date();
+    const changed = JSON.stringify(currentSnapshot) !== JSON.stringify(loadedAppointmentSnapshot);
+    if (isPastAppointment && changed) {
+      const changedFee = currentSnapshot.feeCents !== loadedAppointmentSnapshot.feeCents;
+      const warningText = changedFee
+        ? 'Warning: you are changing a past appointment, including its fee. This affects historical revenue. Continue?'
+        : 'Warning: you are changing a past appointment. This affects historical records. Continue?';
+      if (!window.confirm(warningText)) {
+        return;
+      }
+    }
   }
 
   try {
@@ -575,6 +638,9 @@ clientSelect.addEventListener('change', () => {
   if (!addressInput.value) {
     const client = clientsById.get(Number(clientSelect.value));
     if (client && client.address) addressInput.value = client.address;
+  }
+  if (!document.getElementById('appointmentId').value) {
+    setFeeInputFromClientDefault(clientSelect.value);
   }
 });
 
@@ -688,6 +754,7 @@ async function initPage() {
     document.getElementById('clientId').value = newForId;
     const client = clientsById.get(Number(newForId));
     if (client && client.address) document.getElementById('address').value = client.address;
+    setFeeInputFromClientDefault(newForId);
     openEditor('New Appointment');
     AppCommon.setMessage('Ready for a new appointment.');
   }
@@ -801,7 +868,11 @@ function initBulkForm() {
   bulkClientSelect.addEventListener('change', () => {
     const clientId = Number(bulkClientSelect.value);
     if (clientId && clientsById.has(clientId)) {
-      bulkAddress.value = clientsById.get(clientId).address || '';
+      const client = clientsById.get(clientId);
+      bulkAddress.value = client.address || '';
+      if (bulkFeeInput) {
+        bulkFeeInput.value = (getEffectiveDefaultFeeCents(clientId) / 100).toFixed(2);
+      }
     }
   });
 
@@ -989,6 +1060,9 @@ function initRecurringForm() {
     const clientId = Number(recClientSelect.value);
     if (clientId && clientsById.has(clientId)) {
       recAddress.value = clientsById.get(clientId).address || '';
+      if (recFee) {
+        recFee.value = (getEffectiveDefaultFeeCents(clientId) / 100).toFixed(2);
+      }
     }
   });
 

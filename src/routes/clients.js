@@ -24,8 +24,9 @@ router.get('/', async (req, res) => {
 
   // Non-admin users only see their own patients
   if (user.role !== 'admin') {
-    conditions.push(`c.created_by = $${paramIdx++}`);
+    conditions.push(`c.created_by = $${paramIdx}`);
     params.push(user.id);
+    paramIdx++;
   }
 
   if (search) {
@@ -38,7 +39,7 @@ router.get('/', async (req, res) => {
 
   try {
     const rows = await db.all(
-      `SELECT c.id, c.full_name, c.condition_notes, c.phone, c.email, c.address, c.nif, c.created_by, c.created_at,
+      `SELECT c.id, c.full_name, c.condition_notes, c.phone, c.email, c.address, c.default_fee_cents, c.nif, c.created_by, c.created_at,
               MAX(a.appointment_date) AS last_appointment_date
        FROM clients c
        LEFT JOIN appointments a ON a.client_id = c.id
@@ -71,6 +72,7 @@ router.get('/duplicates', async (req, res) => {
              u1.full_name AS therapist1, u2.full_name AS therapist2
       FROM clients c1
       JOIN clients c2 ON c1.nif = c2.nif AND c1.id < c2.id
+         AND COALESCE(c1.created_by, -1) = COALESCE(c2.created_by, -1)
       LEFT JOIN users u1 ON c1.created_by = u1.id
       LEFT JOIN users u2 ON c2.created_by = u2.id
       WHERE c1.nif IS NOT NULL AND c1.nif != ''
@@ -83,6 +85,7 @@ router.get('/duplicates', async (req, res) => {
              u1.full_name AS therapist1, u2.full_name AS therapist2
       FROM clients c1
       JOIN clients c2 ON lower(trim(c1.full_name)) = lower(trim(c2.full_name)) AND c1.id < c2.id
+        AND COALESCE(c1.created_by, -1) = COALESCE(c2.created_by, -1)
       LEFT JOIN users u1 ON c1.created_by = u1.id
       LEFT JOIN users u2 ON c2.created_by = u2.id
     `);
@@ -142,7 +145,7 @@ router.get('/:id/appointments', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const { db } = require('../db/database');
-  const { fullName, conditionNotes, phone, email, address, nif } = req.body;
+  const { fullName, conditionNotes, phone, email, address, defaultFeeAmount, nif } = req.body;
   const user = req.session.user;
 
   if (!fullName || !fullName.trim() || !conditionNotes || !conditionNotes.trim()) {
@@ -153,10 +156,18 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Invalid NIF. Must be 9 digits with a valid check digit.' });
   }
 
+  let defaultFeeCents = null;
+  if (defaultFeeAmount !== undefined && defaultFeeAmount !== null && defaultFeeAmount !== '') {
+    defaultFeeCents = Math.round(Number(defaultFeeAmount) * 100);
+    if (Number.isNaN(defaultFeeCents) || defaultFeeCents < 0) {
+      return res.status(400).json({ error: 'Default fee must be a non-negative number.' });
+    }
+  }
+
   try {
     const result = await db.run(
-      'INSERT INTO clients (full_name, condition_notes, phone, email, address, nif, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, nif || null, user.id]
+      'INSERT INTO clients (full_name, condition_notes, phone, email, address, default_fee_cents, nif, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, defaultFeeCents, nif || null, user.id]
     );
 
     return res.status(201).json({
@@ -165,6 +176,7 @@ router.post('/', async (req, res) => {
       conditionNotes: conditionNotes.trim(),
       phone: phone || null,
       email: email || null,
+      defaultFeeCents,
       nif: nif || null,
     });
   } catch (error) {
@@ -176,7 +188,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { db } = require('../db/database');
   const clientId = Number(req.params.id);
-  const { fullName, conditionNotes, phone, email, address, nif } = req.body;
+  const { fullName, conditionNotes, phone, email, address, defaultFeeAmount, nif } = req.body;
   const user = req.session.user;
 
   if (!Number.isInteger(clientId) || clientId <= 0) {
@@ -191,6 +203,14 @@ router.put('/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid NIF. Must be 9 digits with a valid check digit.' });
   }
 
+  let defaultFeeCents = null;
+  if (defaultFeeAmount !== undefined && defaultFeeAmount !== null && defaultFeeAmount !== '') {
+    defaultFeeCents = Math.round(Number(defaultFeeAmount) * 100);
+    if (Number.isNaN(defaultFeeCents) || defaultFeeCents < 0) {
+      return res.status(400).json({ error: 'Default fee must be a non-negative number.' });
+    }
+  }
+
   // Non-admin: only update own patients
   if (user.role !== 'admin') {
     const owner = await db.get('SELECT created_by FROM clients WHERE id = $1', [clientId]);
@@ -201,8 +221,8 @@ router.put('/:id', async (req, res) => {
 
   try {
     const result = await db.run(
-      'UPDATE clients SET full_name = $1, condition_notes = $2, phone = $3, email = $4, address = $5, nif = $6 WHERE id = $7',
-      [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, nif || null, clientId]
+      'UPDATE clients SET full_name = $1, condition_notes = $2, phone = $3, email = $4, address = $5, default_fee_cents = $6, nif = $7 WHERE id = $8',
+      [fullName.trim(), conditionNotes.trim(), phone || null, email || null, address || null, defaultFeeCents, nif || null, clientId]
     );
 
     if (result.changes === 0) {
