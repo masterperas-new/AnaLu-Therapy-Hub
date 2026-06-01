@@ -1,7 +1,24 @@
 {
-  "version": "2.10.1",
-  "releaseDate": "2026-05-13",
+  "version": "2.11.0",
+  "releaseDate": "2026-05-26",
   "history": [
+    {
+      "version": "2.11.0",
+      "date": "2026-05-26",
+      "summary": "Therapist-owned patients, Revenue by Client drilldown, XLS export, prepaid support, language selector, mobile fixes.",
+      "changes": [
+        "Revenue by Client section with autocomplete search and per-client KPI cards",
+        "Clickable owed values open Outstanding Payments drawer filtered by client",
+        "Export to XLS: summary table, client appointment details, and outstanding payments",
+        "Therapist-owned patients and fee snapshot safeguards",
+        "Prepaid appointment support",
+        "User-selectable EN/PT-PT language with role-based defaults",
+        "Mobile drawer full-width at 640px breakpoint with body scroll lock",
+        "Appointment not-found no longer blocks the screen (try/catch + dialog)",
+        "Pager visibility fix (.hidden overriding .pager display)",
+        "PostgreSQL GROUP BY compliance fix (amount_cents wrapped in MAX())"
+      ]
+    },
     {
       "version": "2.10.1",
       "date": "2026-05-13",

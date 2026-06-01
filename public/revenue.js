@@ -319,8 +319,13 @@ const clientBackBtn = document.getElementById('clientBackBtn');
 const clientDrilldown = document.getElementById('client-drilldown');
 const clientDrilldownTitle = document.getElementById('client-drilldown-title');
 const clientDrilldownBody = document.getElementById('client-drilldown-body');
+const clientMonthFilter = document.getElementById('clientMonthFilter');
+const clientStatusFilter = document.getElementById('clientStatusFilter');
+const clientFilterClear = document.getElementById('clientFilterClear');
 
 let allClientRevenue = [];
+let allDrilldownRows = [];
+let currentDrilldownClient = null;
 let clientSearchSelect = null;
 
 function hideClientDrilldown() {
@@ -335,34 +340,66 @@ async function loadClientDrilldown(clientRow) {
     return;
   }
 
+  currentDrilldownClient = clientRow;
+  clientMonthFilter.value = '';
+  clientStatusFilter.value = '';
   clientDrilldown.classList.remove('hidden');
-  clientDrilldownTitle.textContent = `Appointments — ${clientRow.full_name}`;
   clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Loading...</td></tr>';
 
   try {
-    const rows = await AppCommon.api(`/ALTApi/appointments?clientId=${clientRow.client_id}`);
-    if (!rows.length) {
-      clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No appointments for this patient.</td></tr>';
-      return;
-    }
-
-    clientDrilldownBody.innerHTML = '';
-    rows.forEach((a) => {
-      const tr = document.createElement('tr');
-      const status = a.wire_received ? '<span class="status-paid">PAID</span>' : '<span class="status-owed">OWED</span>';
-      tr.innerHTML = `
-        <td>${new Date(a.appointment_date).toLocaleString('en-GB')}</td>
-        <td>${status}</td>
-        <td>${AppCommon.euroFromCents(a.fee_cents)}</td>
-        <td>${a.payment_type || '-'}</td>
-        <td>${a.comments || a.notes || '-'}</td>
-      `;
-      clientDrilldownBody.appendChild(tr);
-    });
+    allDrilldownRows = await AppCommon.api(`/ALTApi/appointments?clientId=${clientRow.client_id}`);
+    renderDrilldownTable();
   } catch (err) {
     clientDrilldownBody.innerHTML = `<tr><td colspan="5" style="color:var(--danger)">${err.message}</td></tr>`;
   }
 }
+
+function getFilteredDrilldownRows() {
+  let rows = allDrilldownRows;
+  if (clientMonthFilter.value) {
+    const [fy, fm] = clientMonthFilter.value.split('-').map(Number);
+    rows = rows.filter(a => {
+      const d = new Date(a.appointment_date);
+      return d.getFullYear() === fy && d.getMonth() + 1 === fm;
+    });
+  }
+  if (clientStatusFilter.value === 'paid') rows = rows.filter(a => a.wire_received);
+  else if (clientStatusFilter.value === 'owed') rows = rows.filter(a => !a.wire_received);
+  return rows;
+}
+
+function renderDrilldownTable() {
+  const rows = getFilteredDrilldownRows();
+  const name = currentDrilldownClient ? currentDrilldownClient.full_name : 'Appointments';
+  clientDrilldownTitle.textContent = `Appointments — ${name} (${rows.length})`;
+  clientDrilldownBody.innerHTML = '';
+
+  if (!rows.length) {
+    clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No appointments match the filter.</td></tr>';
+    return;
+  }
+
+  rows.forEach((a) => {
+    const tr = document.createElement('tr');
+    const status = a.wire_received ? '<span class="status-paid">PAID</span>' : '<span class="status-owed">OWED</span>';
+    tr.innerHTML = `
+      <td>${new Date(a.appointment_date).toLocaleString('en-GB')}</td>
+      <td>${status}</td>
+      <td>${AppCommon.euroFromCents(a.fee_cents)}</td>
+      <td>${a.payment_type || '-'}</td>
+      <td>${a.comments || a.notes || '-'}</td>
+    `;
+    clientDrilldownBody.appendChild(tr);
+  });
+}
+
+clientMonthFilter.addEventListener('change', renderDrilldownTable);
+clientStatusFilter.addEventListener('change', renderDrilldownTable);
+clientFilterClear.addEventListener('click', () => {
+  clientMonthFilter.value = '';
+  clientStatusFilter.value = '';
+  renderDrilldownTable();
+});
 
 function showAllClients() {
   if (clientSearchSelect) clientSearchSelect.clear();

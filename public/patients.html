@@ -240,6 +240,15 @@
               <button type="button" id="new-appt-for-patient" class="action-create-blue" style="font-size:0.78rem;padding:4px 10px">+ New Appointment</button>
             </div>
             <input type="text" id="history-search" placeholder="Search appointments…" style="margin-bottom:6px" />
+            <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+              <select id="history-filter-month" style="flex:1;min-width:100px">
+                <option value="">All months</option>
+              </select>
+              <select id="history-filter-year" style="flex:1;min-width:80px">
+                <option value="">All years</option>
+              </select>
+              <button type="button" id="history-filter-clear" class="outline" style="font-size:0.78rem;padding:4px 10px">Clear</button>
+            </div>
             <div class="table-wrap">
               <table class="appt-table" style="min-width:520px">
                 <thead>

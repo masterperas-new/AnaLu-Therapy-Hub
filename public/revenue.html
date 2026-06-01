@@ -107,7 +107,22 @@
             </table>
           </div>
           <div id="client-drilldown" class="hidden" style="margin-top:12px">
-            <h4 id="client-drilldown-title" style="margin:0 0 8px">Appointments</h4>
+            <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:8px">
+              <h4 id="client-drilldown-title" style="margin:0;flex:1;min-width:120px">Appointments</h4>
+              <div>
+                <label for="clientMonthFilter" style="font-size:0.78rem">Month</label>
+                <input id="clientMonthFilter" type="month" style="min-width:130px" />
+              </div>
+              <div>
+                <label for="clientStatusFilter" style="font-size:0.78rem">Status</label>
+                <select id="clientStatusFilter" style="min-width:90px">
+                  <option value="">All</option>
+                  <option value="paid">Paid</option>
+                  <option value="owed">Owed</option>
+                </select>
+              </div>
+              <button id="clientFilterClear" type="button" class="outline" style="margin-top:0;font-size:0.78rem;padding:4px 10px">Clear</button>
+            </div>
             <div style="overflow-x:auto">
               <table class="appt-table">
                 <thead>

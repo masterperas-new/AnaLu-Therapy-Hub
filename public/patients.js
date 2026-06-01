@@ -36,6 +36,9 @@ const closeHistoryBtn = document.getElementById('close-history');
 const historyInfo = document.getElementById('history-info');
 const historyTableBody = document.getElementById('history-table-body');
 const historySearch = document.getElementById('history-search');
+const historyFilterMonth = document.getElementById('history-filter-month');
+const historyFilterYear = document.getElementById('history-filter-year');
+const historyFilterClear = document.getElementById('history-filter-clear');
 const newApptBtn = document.getElementById('new-appt-for-patient');
 const filterSummary = document.getElementById('patient-filter-summary');
 
@@ -121,6 +124,18 @@ async function getOwedCents(clientId) {
   return rows
     .filter((r) => !r.wire_received)
     .reduce((sum, r) => sum + Number(r.fee_cents || 0), 0);
+}
+
+function refreshBalanceCell(clientId) {
+  const cell = document.querySelector(`.balance-cell[data-client-id="${clientId}"]`);
+  if (!cell) return;
+  getOwedCents(clientId).then((owedCents) => {
+    if (owedCents > 0) {
+      cell.innerHTML = `<span class="status-owed">${AppCommon.euroFromCents(owedCents)} owed</span>`;
+    } else {
+      cell.innerHTML = '<span class="status-paid">Clear</span>';
+    }
+  });
 }
 
 function renderPatientsTable() {
@@ -525,6 +540,8 @@ async function openPatientDetails(client) {
   currentHistoryClient = client;
   historyTitle.textContent = `${client.full_name} — Appointments`;
   historySearch.value = '';
+  historyFilterMonth.value = '';
+  historyFilterYear.value = '';
   openDrawer(historyOverlay, historyDrawer);
   await loadHistory(client.id);
 }
@@ -534,13 +551,41 @@ historyOverlay.addEventListener('click', () => closeDrawer(historyOverlay, histo
 
 async function loadHistory(clientId) {
   allHistoryRows = await AppCommon.api(`/ALTApi/clients/${clientId}/appointments`);
+  populateHistoryFilters();
+  applyHistoryFilters();
+}
+
+function populateHistoryFilters() {
+  const years = [...new Set(allHistoryRows.map(r => new Date(r.appointment_date).getFullYear()))].sort((a, b) => b - a);
+  historyFilterYear.innerHTML = '<option value="">All years</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  historyFilterMonth.innerHTML = '<option value="">All months</option>' + Array.from({length: 12}, (_, i) => {
+    const label = new Date(2000, i).toLocaleString('default', {month: 'long'});
+    return `<option value="${i}">${label}</option>`;
+  }).join('');
+}
+
+function getFilteredHistoryRows() {
+  let rows = allHistoryRows;
+  const selYear = historyFilterYear.value;
+  const selMonth = historyFilterMonth.value;
+  if (selYear) rows = rows.filter(r => new Date(r.appointment_date).getFullYear() === Number(selYear));
+  if (selMonth !== '') rows = rows.filter(r => new Date(r.appointment_date).getMonth() === Number(selMonth));
+  const q = (historySearch.value || '').trim().toLowerCase();
+  if (q) rows = rows.filter(r =>
+    (r.location || '').toLowerCase().includes(q) ||
+    new Date(r.appointment_date).toLocaleString('en-GB').toLowerCase().includes(q) ||
+    (r.payment_type || '').toLowerCase().includes(q));
+  return rows;
+}
+
+function applyHistoryFilters() {
   renderHistoryInfo();
   renderHistoryTable();
 }
 
 function renderHistoryInfo() {
   const client = currentHistoryClient;
-  const rows = allHistoryRows;
+  const rows = getFilteredHistoryRows();
   const total = rows.length;
   const isAdmin = AppCommon.getUser()?.role === 'admin';
 
@@ -575,15 +620,9 @@ function renderHistoryInfo() {
   `;
 }
 
-function renderHistoryTable(filter) {
+function renderHistoryTable() {
   historyTableBody.innerHTML = '';
-  const q = (filter || '').toLowerCase();
-  const rows = q
-    ? allHistoryRows.filter((r) =>
-        (r.location || '').toLowerCase().includes(q) ||
-        new Date(r.appointment_date).toLocaleString('en-GB').toLowerCase().includes(q) ||
-        (r.payment_type || '').toLowerCase().includes(q))
-    : allHistoryRows;
+  const rows = getFilteredHistoryRows();
 
   if (!rows.length) {
     const tr = document.createElement('tr');
@@ -629,6 +668,7 @@ function renderHistoryTable(filter) {
           await AppCommon.api(`/ALTApi/appointments/${row.id}/payment-received`, { method: 'PATCH' });
           AppCommon.setMessage('Payment marked as received.');
           await loadHistory(currentHistoryClientId);
+          refreshBalanceCell(currentHistoryClientId);
         } catch (err) {
           AppCommon.setMessage(err.message, true);
         }
@@ -647,8 +687,14 @@ function renderHistoryTable(filter) {
   });
 }
 
-historySearch.addEventListener('input', () => {
-  renderHistoryTable(historySearch.value.trim());
+historySearch.addEventListener('input', () => applyHistoryFilters());
+historyFilterMonth.addEventListener('change', () => applyHistoryFilters());
+historyFilterYear.addEventListener('change', () => applyHistoryFilters());
+historyFilterClear.addEventListener('click', () => {
+  historyFilterMonth.value = '';
+  historyFilterYear.value = '';
+  historySearch.value = '';
+  applyHistoryFilters();
 });
 
 newApptBtn.addEventListener('click', () => {
