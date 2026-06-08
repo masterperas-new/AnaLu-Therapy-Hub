@@ -1024,6 +1024,9 @@ function initRecurringForm() {
 
   const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   let previewDates = [];
+  const recSlots = []; // [{dayOfWeek, timeOfDay}]
+  const recAddSlotBtn = document.getElementById('recAddSlotBtn');
+  const recSlotChips = document.getElementById('recSlotChips');
 
   /* Populate client select */
   recClientSelect.innerHTML = '<option value="" selected disabled>Select a patient</option>';
@@ -1069,9 +1072,9 @@ function initRecurringForm() {
   /* Set default dates */
   const today = new Date();
   recStartDate.value = today.toISOString().slice(0, 10);
-  const threeMonths = new Date(today);
-  threeMonths.setMonth(threeMonths.getMonth() + 3);
-  recEndDate.value = threeMonths.toISOString().slice(0, 10);
+  const thirtyDays = new Date(today);
+  thirtyDays.setDate(thirtyDays.getDate() + 30);
+  recEndDate.value = thirtyDays.toISOString().slice(0, 10);
 
   /* Tab switching */
   document.querySelectorAll('.rec-tab').forEach((tab) => {
@@ -1108,14 +1111,59 @@ function initRecurringForm() {
   closeRecBtn.addEventListener('click', closeRecDrawer);
   recOverlay.addEventListener('click', closeRecDrawer);
 
+  /* Slot management (R3) */
+  function renderSlotChips() {
+    recSlotChips.innerHTML = '';
+    recSlots.forEach((slot, idx) => {
+      const chip = document.createElement('span');
+      chip.className = 'date-chip';
+      chip.innerHTML = `${DAY_NAMES[slot.dayOfWeek]} ${slot.timeOfDay} <button type="button" class="date-chip-remove" data-idx="${idx}">&times;</button>`;
+      chip.querySelector('.date-chip-remove').addEventListener('click', () => {
+        recSlots.splice(idx, 1);
+        renderSlotChips();
+        previewDates = [];
+        previewChips.innerHTML = '';
+        submitBtn.textContent = 'Create Recurring Appointments';
+        submitBtn.disabled = true;
+      });
+      recSlotChips.appendChild(chip);
+    });
+  }
+
+  recAddSlotBtn.addEventListener('click', () => {
+    const dayOfWeek = Number(recDayOfWeek.value);
+    const timeOfDay = recTime.value;
+    if (!timeOfDay) {
+      showDialog('Please select a time.', true);
+      return;
+    }
+    const exists = recSlots.some(s => s.dayOfWeek === dayOfWeek && s.timeOfDay === timeOfDay);
+    if (exists) {
+      showDialog('That day/time slot is already added.', true);
+      return;
+    }
+    recSlots.push({ dayOfWeek, timeOfDay });
+    renderSlotChips();
+    // Clear preview when slots change
+    previewDates = [];
+    previewChips.innerHTML = '';
+    submitBtn.textContent = 'Create Recurring Appointments';
+    submitBtn.disabled = true;
+  });
+
   /* Preview */
   previewBtn.addEventListener('click', async () => {
+    // Use slots if any, otherwise fall back to current day/time selection
+    const slotsToPreview = recSlots.length
+      ? recSlots
+      : [{ dayOfWeek: Number(recDayOfWeek.value), timeOfDay: recTime.value }];
+
     const payload = {
       frequency: recFrequency.value,
-      dayOfWeek: Number(recDayOfWeek.value),
-      timeOfDay: recTime.value,
+      slots: slotsToPreview,
       startDate: recStartDate.value,
       endDate: recEndDate.value,
+      utcOffset: new Date().getTimezoneOffset(),
     };
     try {
       const result = await AppCommon.api('/ALTApi/recurrences/preview', {
@@ -1158,11 +1206,15 @@ function initRecurringForm() {
       return;
     }
 
+    // Use slots if any, otherwise fall back to current day/time selection
+    const slotsToSend = recSlots.length
+      ? recSlots
+      : [{ dayOfWeek: Number(recDayOfWeek.value), timeOfDay: recTime.value }];
+
     const payload = {
       clientId: Number(recClientSelect.value),
       frequency: recFrequency.value,
-      dayOfWeek: Number(recDayOfWeek.value),
-      timeOfDay: recTime.value,
+      slots: slotsToSend,
       startDate: recStartDate.value,
       endDate: recEndDate.value,
       address: recAddress.value,
@@ -1170,6 +1222,7 @@ function initRecurringForm() {
       feeAmount: recFee.value !== '' ? Number(recFee.value) : undefined,
       paymentType: recPaymentType.value || null,
       comments: recComments.value || null,
+      utcOffset: new Date().getTimezoneOffset(),
     };
 
     if (isAdmin) {
@@ -1189,7 +1242,11 @@ function initRecurringForm() {
       recDuration.value = '60';
       recTime.value = '09:00';
       recStartDate.value = today.toISOString().slice(0, 10);
-      recEndDate.value = threeMonths.toISOString().slice(0, 10);
+      const resetEnd = new Date(today);
+      resetEnd.setDate(resetEnd.getDate() + 30);
+      recEndDate.value = resetEnd.toISOString().slice(0, 10);
+      recSlots.length = 0;
+      renderSlotChips();
       previewDates = [];
       previewChips.innerHTML = '';
       submitBtn.textContent = 'Create Recurring Appointments';

@@ -261,10 +261,18 @@ function renderCalendar() {
     grouped.get(key).push(appointment);
   });
 
-  function buildChip(appointment) {
+  // C1: Sort each day's events earliest-first
+  for (const events of grouped.values()) {
+    events.sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+  }
+
+  const now = new Date();
+
+  function buildChip(appointment, isToday) {
     const link = document.createElement('a');
     const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
-    link.className = `appt-chip ${chipClass}`;
+    const pastClass = isToday && new Date(appointment.appointment_date) < now ? ' appt-chip--past' : '';
+    link.className = `appt-chip ${chipClass}${pastClass}`;
     link.href = `/appointments.html?id=${appointment.id}`;
     link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
     return link;
@@ -293,10 +301,12 @@ function renderCalendar() {
 
     const list = document.createElement('div');
     list.className = 'day-popup-list';
+    const popupIsToday = isSameDay(date, now);
     events.forEach((appointment) => {
       const row = document.createElement('a');
       const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
-      row.className = `day-popup-item ${chipClass}`;
+      const pastClass = popupIsToday && new Date(appointment.appointment_date) < now ? ' appt-chip--past' : '';
+      row.className = `day-popup-item ${chipClass}${pastClass}`;
       row.href = `/appointments.html?id=${appointment.id}`;
 
       const time = document.createElement('span');
@@ -348,8 +358,9 @@ function renderCalendar() {
       cell.appendChild(title);
 
       const events = grouped.get(dayKey(date)) || [];
+      const isToday = isSameDay(date, now);
       events.slice(0, MONTH_VISIBLE).forEach((appointment) => {
-        cell.appendChild(buildChip(appointment));
+        cell.appendChild(buildChip(appointment, isToday));
       });
 
       if (events.length > MONTH_VISIBLE) {
@@ -388,6 +399,7 @@ function renderCalendar() {
     cell.appendChild(title);
 
     const events = grouped.get(dayKey(date)) || [];
+    const isToday = isSameDay(date, now);
     if (!events.length) {
       const empty = document.createElement('p');
       empty.className = 'small';
@@ -395,7 +407,7 @@ function renderCalendar() {
       cell.appendChild(empty);
     } else {
       events.slice(0, WEEK_VISIBLE).forEach((appointment) => {
-        cell.appendChild(buildChip(appointment));
+        cell.appendChild(buildChip(appointment, isToday));
       });
       if (events.length > WEEK_VISIBLE) {
         const more = document.createElement('button');

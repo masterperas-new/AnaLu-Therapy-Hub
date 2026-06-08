@@ -344,13 +344,13 @@ async function loadClientDrilldown(clientRow) {
   clientMonthFilter.value = '';
   clientStatusFilter.value = '';
   clientDrilldown.classList.remove('hidden');
-  clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Loading...</td></tr>';
+  clientDrilldownBody.innerHTML = '<tr><td colspan="6" style="color:var(--muted)">Loading...</td></tr>';
 
   try {
     allDrilldownRows = await AppCommon.api(`/ALTApi/appointments?clientId=${clientRow.client_id}`);
     renderDrilldownTable();
   } catch (err) {
-    clientDrilldownBody.innerHTML = `<tr><td colspan="5" style="color:var(--danger)">${err.message}</td></tr>`;
+    clientDrilldownBody.innerHTML = `<tr><td colspan="6" style="color:var(--danger)">${err.message}</td></tr>`;
   }
 }
 
@@ -375,7 +375,7 @@ function renderDrilldownTable() {
   clientDrilldownBody.innerHTML = '';
 
   if (!rows.length) {
-    clientDrilldownBody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No appointments match the filter.</td></tr>';
+    clientDrilldownBody.innerHTML = '<tr><td colspan="6" style="color:var(--muted)">No appointments match the filter.</td></tr>';
     return;
   }
 
@@ -388,7 +388,42 @@ function renderDrilldownTable() {
       <td>${AppCommon.euroFromCents(a.fee_cents)}</td>
       <td>${a.payment_type || '-'}</td>
       <td>${a.comments || a.notes || '-'}</td>
+      <td></td>
     `;
+
+    if (!a.wire_received) {
+      const actionTd = tr.lastElementChild;
+      const payBtn = document.createElement('button');
+      payBtn.type = 'button';
+      payBtn.className = 'outline tiny-btn';
+      payBtn.textContent = '\u2713 Paid';
+      payBtn.style.color = 'var(--ok)';
+      payBtn.style.borderColor = 'var(--ok)';
+      payBtn.addEventListener('click', async () => {
+        const ok = await AppCommon.confirmPayment({
+          name: currentDrilldownClient.full_name,
+          date: new Date(a.appointment_date).toLocaleDateString('en-GB'),
+          fee: AppCommon.euroFromCents(a.fee_cents),
+        });
+        if (!ok) return;
+        try {
+          await AppCommon.api(`/ALTApi/appointments/${a.id}/payment-received`, {
+            method: 'PATCH',
+            body: JSON.stringify({}),
+          });
+          AppCommon.setMessage('Marked as paid.');
+          await Promise.all([loadTotal(), loadMonth(), loadOwed(), loadFuture(), loadClientRevenue()]);
+          if (currentDrilldownClient) {
+            allDrilldownRows = await AppCommon.api(`/ALTApi/appointments?clientId=${currentDrilldownClient.client_id}`);
+            renderDrilldownTable();
+          }
+        } catch (err) {
+          AppCommon.setMessage(err.message, true);
+        }
+      });
+      actionTd.appendChild(payBtn);
+    }
+
     clientDrilldownBody.appendChild(tr);
   });
 }
@@ -573,6 +608,71 @@ function renderClientTable(rows) {
     clientRevenueBody.appendChild(tr);
   });
 }
+
+/* ── Revenue Tab Switching (V1) ── */
+document.querySelectorAll('.rev-tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.rev-tab').forEach((t) => t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.revTab;
+    document.getElementById('rev-tab-overview').style.display = target === 'overview' ? '' : 'none';
+    document.getElementById('rev-tab-by-client').style.display = target === 'by-client' ? '' : 'none';
+  });
+});
+
+/* ── Export Month & Global XLS (V3) ── */
+document.getElementById('exportMonthBtn').addEventListener('click', async () => {
+  const month = monthInput.value;
+  if (!month) {
+    AppCommon.setMessage('Select a month first.', true);
+    return;
+  }
+  try {
+    const appts = await AppCommon.api(`/ALTApi/appointments?month=${encodeURIComponent(month)}${userIdParam()}`);
+    if (!appts.length) {
+      AppCommon.setMessage('No appointments for this month.', true);
+      return;
+    }
+    const headers = ['Date', 'Patient', 'Location', 'Duration (min)', 'Fee (€)', 'Paid', 'Payment Type', 'Notes'];
+    const data = appts.map(a => [
+      new Date(a.appointment_date).toLocaleDateString('en-GB'),
+      a.full_name,
+      a.location || '',
+      a.duration_minutes,
+      (a.fee_cents / 100).toFixed(2),
+      a.wire_received ? 'Yes' : 'No',
+      a.payment_type || '',
+      a.comments || a.notes || '',
+    ]);
+    AppCommon.exportToXls(`revenue-${month}.xls`, headers, data, `Revenue — ${month}`);
+  } catch (err) {
+    AppCommon.setMessage(err.message, true);
+  }
+});
+
+document.getElementById('exportGlobalBtn').addEventListener('click', async () => {
+  try {
+    const appts = await AppCommon.api(`/ALTApi/appointments?${userIdParam().replace('&', '')}`);
+    if (!appts.length) {
+      AppCommon.setMessage('No appointments to export.', true);
+      return;
+    }
+    const headers = ['Date', 'Patient', 'Location', 'Duration (min)', 'Fee (€)', 'Paid', 'Payment Type', 'Notes'];
+    const data = appts.map(a => [
+      new Date(a.appointment_date).toLocaleDateString('en-GB'),
+      a.full_name,
+      a.location || '',
+      a.duration_minutes,
+      (a.fee_cents / 100).toFixed(2),
+      a.wire_received ? 'Yes' : 'No',
+      a.payment_type || '',
+      a.comments || a.notes || '',
+    ]);
+    AppCommon.exportToXls('revenue-all.xls', headers, data, 'Revenue — All Time');
+  } catch (err) {
+    AppCommon.setMessage(err.message, true);
+  }
+});
 
 AppCommon.ensureAuth(async () => {
   const user = AppCommon.getUser();

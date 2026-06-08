@@ -55,30 +55,44 @@
           </select>
         </div>
 
-        <section class="card">
-          <h3 style="margin-bottom:10px">Total Revenue</h3>
-          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">💡 Tip: Click the <strong>Owed</strong> cards to view and manage outstanding payments.</p>
-          <div id="totalKpis" class="revenue-kpis"></div>
-        </section>
+        <!-- Revenue Tab Bar -->
+        <div class="rec-tabs" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--line, var(--border))">
+          <button type="button" class="rev-tab active" data-rev-tab="overview">Total Monthly &amp; Future</button>
+          <button type="button" class="rev-tab" data-rev-tab="by-client">Revenue by Client</button>
+        </div>
 
-        <section class="card">
-          <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
-            <h3 id="month-label" style="margin:0;flex:1;min-width:120px">Monthly</h3>
-            <div style="display:flex;gap:8px;align-items:end">
-              <div><label for="monthInput">Month</label><input id="monthInput" type="month" /></div>
-              <button id="loadMonth" type="button" style="margin-top:0">Load</button>
+        <!-- Tab 1: Total Monthly & Future -->
+        <div id="rev-tab-overview" class="rev-tab-content">
+          <section class="card">
+            <h3 style="margin-bottom:10px">Total Revenue</h3>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">💡 Tip: Click the <strong>Owed</strong> cards to view and manage outstanding payments.</p>
+            <div id="totalKpis" class="revenue-kpis"></div>
+          </section>
+
+          <section class="card">
+            <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+              <h3 id="month-label" style="margin:0;flex:1;min-width:120px">Monthly</h3>
+              <div style="display:flex;gap:8px;align-items:end">
+                <div><label for="monthInput">Month</label><input id="monthInput" type="month" /></div>
+                <button id="loadMonth" type="button" style="margin-top:0">Load</button>
+              </div>
             </div>
-          </div>
-          <div id="monthKpis" class="revenue-kpis" style="margin-top:12px"></div>
-        </section>
+            <div id="monthKpis" class="revenue-kpis" style="margin-top:12px"></div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              <button id="exportMonthBtn" type="button" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export Month XLS</button>
+              <button id="exportGlobalBtn" type="button" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export All XLS</button>
+            </div>
+          </section>
 
-        <section class="card">
-          <h3 id="future-label" style="margin-bottom:10px">Future Revenue</h3>
-          <div id="futureKpis" class="revenue-kpis"></div>
-        </section>
+          <section class="card">
+            <h3 id="future-label" style="margin-bottom:10px">Future Revenue</h3>
+            <div id="futureKpis" class="revenue-kpis"></div>
+          </section>
+        </div>
 
-        <!-- Revenue by Client -->
-        <section class="card">
+        <!-- Tab 2: Revenue by Client -->
+        <div id="rev-tab-by-client" class="rev-tab-content" style="display:none">
+          <section class="card">
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
             <h3 style="margin:0;flex:1;min-width:120px">Revenue by Client</h3>
             <button id="clientBackBtn" type="button" class="outline hidden" style="font-size:0.82rem;padding:4px 10px">← All Clients</button>
@@ -132,6 +146,7 @@
                     <th>Fee</th>
                     <th>Payment Type</th>
                     <th>Notes</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody id="client-drilldown-body"></tbody>
@@ -139,6 +154,7 @@
             </div>
           </div>
         </section>
+        </div><!-- /rev-tab-by-client -->
 
       </section>
 

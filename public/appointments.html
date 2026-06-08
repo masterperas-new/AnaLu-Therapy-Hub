@@ -294,7 +294,7 @@
               </div>
               <div>
                 <label for="recDayOfWeek">Day of Week</label>
-                <select id="recDayOfWeek" required>
+                <select id="recDayOfWeek">
                   <option value="1">Monday</option>
                   <option value="2">Tuesday</option>
                   <option value="3">Wednesday</option>
@@ -306,7 +306,11 @@
               </div>
               <div>
                 <label for="recTime">Time</label>
-                <input id="recTime" type="time" value="09:00" required />
+                <input id="recTime" type="time" value="09:00" />
+              </div>
+              <div style="grid-column: 1 / -1;">
+                <button type="button" id="recAddSlotBtn" class="outline" style="width:100%">+ Add Day/Time Slot</button>
+                <div id="recSlotChips" class="date-chips" style="margin-top:8px"></div>
               </div>
               <div>
                 <label for="recStartDate">Start Date</label>

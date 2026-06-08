@@ -78,44 +78,53 @@ async function ensureClientForTherapist(clientId, therapistUserId) {
   return Number(result.lastID);
 }
 
-/* Helper: generate dates for a recurrence pattern */
-function generateDates(frequency, dayOfWeek, timeOfDay, startDate, endDate) {
+/* Helper: generate dates for a recurrence pattern
+   Uses UTC methods throughout to avoid server-timezone shifts.
+   utcOffsetMinutes = client's new Date().getTimezoneOffset() (e.g. -60 for UTC+1) */
+function generateDates(frequency, dayOfWeek, timeOfDay, startDate, endDate, utcOffsetMinutes) {
   const dates = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const offset = Number(utcOffsetMinutes || 0);
   const [hours, minutes] = timeOfDay.split(':').map(Number);
+
+  // Parse dates at noon UTC to avoid date-boundary issues
+  const start = new Date(startDate + 'T12:00:00Z');
+  const end = new Date(endDate + 'T12:00:00Z');
 
   // Find the first occurrence on or after startDate matching dayOfWeek
   const cursor = new Date(start);
-  cursor.setHours(hours, minutes, 0, 0);
-  while (cursor.getDay() !== dayOfWeek) {
-    cursor.setDate(cursor.getDate() + 1);
+  while (cursor.getUTCDay() !== dayOfWeek) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
 
   const stepDays = frequency === 'weekly' ? 7 : frequency === 'biweekly' ? 14 : 0;
 
   while (cursor <= end) {
+    // Build the appointment date: set the intended local time, adjusted to UTC
+    const d = new Date(Date.UTC(
+      cursor.getUTCFullYear(), cursor.getUTCMonth(), cursor.getUTCDate(),
+      hours, minutes + offset, 0, 0
+    ));
+    dates.push(d);
+
     if (frequency === 'monthly') {
-      dates.push(new Date(cursor));
       // Advance to same weekday next month
-      const targetDay = cursor.getDay();
-      const weekOfMonth = Math.floor((cursor.getDate() - 1) / 7);
-      cursor.setMonth(cursor.getMonth() + 1, 1);
+      const targetDay = cursor.getUTCDay();
+      const weekOfMonth = Math.floor((cursor.getUTCDate() - 1) / 7);
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1, 1);
       // Find the nth weekday of the new month
-      while (cursor.getDay() !== targetDay) {
-        cursor.setDate(cursor.getDate() + 1);
+      while (cursor.getUTCDay() !== targetDay) {
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
-      cursor.setDate(cursor.getDate() + weekOfMonth * 7);
-      if (cursor.getDate() > 28) {
+      cursor.setUTCDate(cursor.getUTCDate() + weekOfMonth * 7);
+      if (cursor.getUTCDate() > 28) {
         // If we overflowed the month, skip
-        cursor.setMonth(cursor.getMonth() + 1, 1);
-        while (cursor.getDay() !== targetDay) {
-          cursor.setDate(cursor.getDate() + 1);
+        cursor.setUTCMonth(cursor.getUTCMonth() + 1, 1);
+        while (cursor.getUTCDay() !== targetDay) {
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
         }
       }
     } else {
-      dates.push(new Date(cursor));
-      cursor.setDate(cursor.getDate() + stepDays);
+      cursor.setUTCDate(cursor.getUTCDate() + stepDays);
     }
   }
 
@@ -156,22 +165,35 @@ router.get('/', async (req, res) => {
 /* POST /recurrences/preview — preview dates without creating */
 router.post('/preview', async (req, res) => {
   try {
-    const { frequency, dayOfWeek, timeOfDay, startDate, endDate } = req.body;
-    if (!frequency || dayOfWeek === undefined || !timeOfDay || !startDate || !endDate) {
+    const { frequency, dayOfWeek, timeOfDay, startDate, endDate, utcOffset, slots } = req.body;
+
+    // Support both single dayOfWeek/timeOfDay and multi-slot array
+    const slotList = Array.isArray(slots) && slots.length
+      ? slots
+      : (dayOfWeek !== undefined && timeOfDay ? [{ dayOfWeek, timeOfDay }] : []);
+
+    if (!frequency || !slotList.length || !startDate || !endDate) {
       return res.status(400).json({ error: 'All pattern fields are required.' });
     }
-    const dates = generateDates(frequency, Number(dayOfWeek), timeOfDay, startDate, endDate);
-    if (dates.length > 104) {
-      return res.status(400).json({ error: 'Too many dates (max 2 years / 104 weekly).' });
+
+    let allDates = [];
+    for (const slot of slotList) {
+      const dates = generateDates(frequency, Number(slot.dayOfWeek), slot.timeOfDay, startDate, endDate, utcOffset);
+      allDates = allDates.concat(dates);
     }
-    return res.json({ dates: dates.map((d) => d.toISOString()), count: dates.length });
+    allDates.sort((a, b) => a.getTime() - b.getTime());
+
+    if (allDates.length > 208) {
+      return res.status(400).json({ error: 'Too many dates (max 208).' });
+    }
+    return res.json({ dates: allDates.map((d) => d.toISOString()), count: allDates.length });
   } catch (err) {
     console.error('Error previewing recurrence:', err);
     return res.status(500).json({ error: 'Failed to preview recurrence.' });
   }
 });
 
-/* POST /recurrences — create recurrence + appointments */
+/* POST /recurrences — create recurrence + appointments (supports multi-slot) */
 router.post('/', async (req, res) => {
   const { db } = require('../db/database');
   try {
@@ -179,10 +201,15 @@ router.post('/', async (req, res) => {
     const {
       clientId, frequency, dayOfWeek, timeOfDay,
       startDate, endDate, address, durationMinutes,
-      feeAmount, paymentType, comments, userId,
+      feeAmount, paymentType, comments, userId, utcOffset, slots,
     } = req.body;
 
-    if (!clientId || !frequency || dayOfWeek === undefined || !timeOfDay || !startDate || !endDate || !address?.trim()) {
+    // Support both single dayOfWeek/timeOfDay and multi-slot array
+    const slotList = Array.isArray(slots) && slots.length
+      ? slots
+      : (dayOfWeek !== undefined && timeOfDay ? [{ dayOfWeek, timeOfDay }] : []);
+
+    if (!clientId || !frequency || !slotList.length || !startDate || !endDate || !address?.trim()) {
       return res.status(400).json({ error: 'All required fields must be filled.' });
     }
 
@@ -218,32 +245,6 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: feeErr.message });
     }
 
-    // Generate dates
-    const dates = generateDates(frequency, Number(dayOfWeek), timeOfDay, startDate, endDate);
-    if (dates.length === 0) {
-      return res.status(400).json({ error: 'No dates match the selected pattern.' });
-    }
-    if (dates.length > 104) {
-      return res.status(400).json({ error: 'Too many occurrences (max 104). Shorten the date range.' });
-    }
-
-    // Create recurrence record
-    const recResult = await db.run(`
-      INSERT INTO recurrences (
-        client_id, user_id, frequency, day_of_week, time_of_day,
-        start_date, end_date, address, duration_minutes, fee_cents,
-        payment_type, comments, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      RETURNING id
-    `, [
-      effectiveClientId, assignedUserId, frequency, Number(dayOfWeek), timeOfDay,
-      startDate, endDate, address.trim(), safeDuration, feeCents,
-      safePaymentType, comments || null, 'active',
-    ]);
-
-    const recurrenceId = recResult.lastID;
-
-    // Create individual appointments
     const apptSql = `
       INSERT INTO appointments (
         client_id, user_id, appointment_date, location, fee_cents,
@@ -253,20 +254,50 @@ router.post('/', async (req, res) => {
       RETURNING id
     `;
 
-    const ids = [];
-    for (const date of dates) {
-      const result = await db.run(apptSql, [
-        effectiveClientId, assignedUserId, date.toISOString(), address.trim(), feeCents,
-        safeDuration, comments || null, comments || null, 0, null,
-        safePaymentType, recurrenceId,
+    const recurrenceIds = [];
+    const allIds = [];
+
+    for (const slot of slotList) {
+      // Generate dates for this slot
+      const dates = generateDates(frequency, Number(slot.dayOfWeek), slot.timeOfDay, startDate, endDate, utcOffset);
+      if (dates.length === 0) continue;
+
+      // Create recurrence record per slot
+      const recResult = await db.run(`
+        INSERT INTO recurrences (
+          client_id, user_id, frequency, day_of_week, time_of_day,
+          start_date, end_date, address, duration_minutes, fee_cents,
+          payment_type, comments, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING id
+      `, [
+        effectiveClientId, assignedUserId, frequency, Number(slot.dayOfWeek), slot.timeOfDay,
+        startDate, endDate, address.trim(), safeDuration, feeCents,
+        safePaymentType, comments || null, 'active',
       ]);
-      ids.push(result.lastID);
+
+      const recurrenceId = recResult.lastID;
+      recurrenceIds.push(recurrenceId);
+
+      for (const date of dates) {
+        const result = await db.run(apptSql, [
+          effectiveClientId, assignedUserId, date.toISOString(), address.trim(), feeCents,
+          safeDuration, comments || null, comments || null, 0, null,
+          safePaymentType, recurrenceId,
+        ]);
+        allIds.push(result.lastID);
+      }
+    }
+
+    if (allIds.length === 0) {
+      return res.status(400).json({ error: 'No dates match the selected pattern.' });
     }
 
     return res.status(201).json({
-      recurrenceId,
-      count: ids.length,
-      ids,
+      recurrenceIds,
+      recurrenceId: recurrenceIds[0],
+      count: allIds.length,
+      ids: allIds,
     });
   } catch (err) {
     console.error('Error creating recurrence:', err);

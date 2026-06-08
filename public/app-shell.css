@@ -311,6 +311,13 @@ button.action-create {
   background: linear-gradient(120deg, var(--save), var(--save-2));
 }
 
+button.action-create:disabled,
+button.action-create-blue:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+
 button.action-create-blue {
   background: linear-gradient(120deg, var(--create-blue), var(--create-blue-2));
 }
@@ -508,6 +515,10 @@ button.action-delete:hover {
 .appt-chip.owed { background: var(--chip-owed-bg); color: var(--chip-owed-text); }
 .appt-chip.paid { background: var(--chip-paid-bg); color: var(--chip-paid-text); }
 
+/* Past events on today's cell */
+.appt-chip.appt-chip--past { opacity: 0.5; text-decoration: line-through; }
+.day-popup-item.appt-chip--past { opacity: 0.5; text-decoration: line-through; }
+
 /* +N more button */
 .more-btn {
   display: block;
@@ -608,6 +619,26 @@ button.action-delete:hover {
   border-bottom-color: var(--primary, #2563eb);
 }
 .rec-tab:hover { color: var(--text, #333); }
+
+/* Revenue tabs (reuse rec-tab style) */
+.rev-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted, #888);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.rev-tab.active {
+  color: var(--primary, #2563eb);
+  border-bottom-color: var(--primary, #2563eb);
+}
+.rev-tab:hover { color: var(--text, #333); }
 
 /* Recurrence cards in manage tab */
 .rec-card {
