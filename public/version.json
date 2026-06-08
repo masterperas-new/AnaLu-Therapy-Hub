@@ -3,6 +3,22 @@
   "releaseDate": "2026-06-08",
   "history": [
     {
+      "version": "2.12.0",
+      "date": "2026-06-08",
+      "summary": "Recurring multi-slot, timezone fix, calendar sorting, revenue tabs.",
+      "changes": [
+        "Fix recurring appointment timezone shift (+1h) with UTC-aware date generation",
+        "Default recurring end date changed from 3 months to 30 days",
+        "Support multiple day/time slots per recurring creation (e.g. Mon 9:00 + Thu 11:00)",
+        "Calendar events sorted earliest-first within each day",
+        "Past events on today's cell shown with reduced opacity and strikethrough",
+        "Revenue page restructured into two tabs (Total Monthly & Future / Revenue by Client)",
+        "Mark-as-paid button added to client appointment drilldown",
+        "Export Month XLS and Export All XLS buttons in revenue",
+        "Disabled button styling for recurring submit button"
+      ]
+    },
+    {
       "version": "2.11.0",
       "date": "2026-05-26",
       "summary": "Therapist-owned patients, Revenue by Client drilldown, XLS export, prepaid support, language selector, mobile fixes.",
