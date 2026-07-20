@@ -40,9 +40,11 @@ router.get('/', async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT c.id, c.full_name, c.condition_notes, c.phone, c.email, c.address, c.default_fee_cents, c.nif, c.created_by, c.created_at,
-              MAX(a.appointment_date) AS last_appointment_date
+              MAX(a.appointment_date) AS last_appointment_date,
+              u.full_name AS therapist_name
        FROM clients c
        LEFT JOIN appointments a ON a.client_id = c.id
+       LEFT JOIN users u ON c.created_by = u.id
        ${whereSql}
        GROUP BY c.id
        ORDER BY c.full_name ASC`,

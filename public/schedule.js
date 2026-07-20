@@ -268,10 +268,10 @@ function renderCalendar() {
 
   const now = new Date();
 
-  function buildChip(appointment, isToday) {
+  function buildChip(appointment) {
     const link = document.createElement('a');
     const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
-    const pastClass = isToday && new Date(appointment.appointment_date) < now ? ' appt-chip--past' : '';
+    const pastClass = new Date(appointment.appointment_date) < now ? ' appt-chip--past' : '';
     link.className = `appt-chip ${chipClass}${pastClass}`;
     link.href = `/appointments.html?id=${appointment.id}`;
     link.textContent = `${new Date(appointment.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ${appointment.full_name}`;
@@ -301,11 +301,10 @@ function renderCalendar() {
 
     const list = document.createElement('div');
     list.className = 'day-popup-list';
-    const popupIsToday = isSameDay(date, now);
     events.forEach((appointment) => {
       const row = document.createElement('a');
       const chipClass = AppCommon.getUser()?.role === 'admin' ? '' : (appointment.wire_received ? 'paid' : 'owed');
-      const pastClass = popupIsToday && new Date(appointment.appointment_date) < now ? ' appt-chip--past' : '';
+      const pastClass = new Date(appointment.appointment_date) < now ? ' appt-chip--past' : '';
       row.className = `day-popup-item ${chipClass}${pastClass}`;
       row.href = `/appointments.html?id=${appointment.id}`;
 
@@ -358,9 +357,8 @@ function renderCalendar() {
       cell.appendChild(title);
 
       const events = grouped.get(dayKey(date)) || [];
-      const isToday = isSameDay(date, now);
       events.slice(0, MONTH_VISIBLE).forEach((appointment) => {
-        cell.appendChild(buildChip(appointment, isToday));
+        cell.appendChild(buildChip(appointment));
       });
 
       if (events.length > MONTH_VISIBLE) {
@@ -399,7 +397,6 @@ function renderCalendar() {
     cell.appendChild(title);
 
     const events = grouped.get(dayKey(date)) || [];
-    const isToday = isSameDay(date, now);
     if (!events.length) {
       const empty = document.createElement('p');
       empty.className = 'small';
@@ -407,7 +404,7 @@ function renderCalendar() {
       cell.appendChild(empty);
     } else {
       events.slice(0, WEEK_VISIBLE).forEach((appointment) => {
-        cell.appendChild(buildChip(appointment, isToday));
+        cell.appendChild(buildChip(appointment));
       });
       if (events.length > WEEK_VISIBLE) {
         const more = document.createElement('button');

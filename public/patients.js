@@ -162,6 +162,7 @@ function renderPatientsTable() {
     const isAdmin = AppCommon.getUser()?.role === 'admin';
     tr.innerHTML = `
       <td>${client.full_name}</td>
+      ${isAdmin ? `<td>${client.therapist_name || '-'}</td>` : ''}
       <td>${client.phone || '-'}</td>
       <td>${client.email || '-'}</td>
       ${!isAdmin ? `<td class="balance-cell" data-client-id="${client.id}"><span class="small">...</span></td>` : ''}
