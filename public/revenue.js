@@ -34,7 +34,7 @@ function userIdSeparator() {
   return val ? `?userId=${val}` : '';
 }
 
-function renderKpis(target, report) {
+function renderKpis(target, report, month) {
   target.innerHTML = `
     <div class="rev-kpi">
       <span class="rev-kpi-label">Appointments</span>
@@ -63,7 +63,7 @@ function renderKpis(target, report) {
   `;
 
   target.querySelectorAll('[data-action="show-owed"]').forEach((el) => {
-    el.addEventListener('click', () => openOwedDrawer());
+    el.addEventListener('click', () => openOwedDrawer(null, month));
   });
 }
 
@@ -176,19 +176,23 @@ const owedDrawer = document.getElementById('owed-drawer');
 const closeOwedBtn = document.getElementById('close-owed');
 
 let owedLockedClient = null;
+let owedFilterMonth = null;
 
-function openOwedDrawer(filterName) {
+function openOwedDrawer(filterName, month) {
   owedLockedClient = filterName || null;
+  owedFilterMonth = month || null;
   owedSearch.value = filterName || '';
   owedSearch.readOnly = !!owedLockedClient;
   owedCurrentPage = 1;
-  renderOwedTable(owedSearch.value);
-  owedOverlay.classList.remove('hidden');
-  owedDrawer.classList.remove('hidden');
-  requestAnimationFrame(() => {
-    owedOverlay.classList.add('open');
-    owedDrawer.classList.add('open');
-    owedDrawer.setAttribute('aria-hidden', 'false');
+  loadOwed(month).then(() => {
+    renderOwedTable(owedSearch.value);
+    owedOverlay.classList.remove('hidden');
+    owedDrawer.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      owedOverlay.classList.add('open');
+      owedDrawer.classList.add('open');
+      owedDrawer.setAttribute('aria-hidden', 'false');
+    });
   });
 }
 
@@ -266,9 +270,25 @@ async function loadTotal() {
   renderKpis(totalKpis, report);
 }
 
-async function loadOwed() {
-  const today = new Date().toISOString().slice(0, 10);
-  allOwed = await AppCommon.api(`/ALTApi/appointments?wireReceived=0&to=${today}${userIdParam()}`);
+async function loadOwed(month) {
+  let url = `/ALTApi/appointments?wireReceived=0`;
+  
+  if (month) {
+    // Filter by month: e.g., "2026-06" becomes from=2026-06-01 and to=2026-06-30
+    const [year, monthNum] = month.split('-');
+    const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+    const from = `${month}-01`;
+    const to = `${month}-${String(lastDay).padStart(2, '0')}`;
+    url += `&from=${from}&to=${to}`;
+  } else {
+    // Load all outstanding up to today
+    const today = new Date().toISOString().slice(0, 10);
+    url += `&to=${today}`;
+  }
+  
+  url += userIdParam();
+  allOwed = await AppCommon.api(url);
+  
   // If drawer is open and locked to a client, re-render with that filter
   if (owedLockedClient) {
     renderOwedTable(owedLockedClient);
@@ -295,7 +315,7 @@ async function loadMonth() {
 
   const report = await AppCommon.api(`/ALTApi/reports/monthly?month=${encodeURIComponent(month)}${userIdParam()}`);
   monthLabel.textContent = `Monthly \u2014 ${month}`;
-  renderKpis(monthKpis, report);
+  renderKpis(monthKpis, report, month);
 }
 
 document.getElementById('loadMonth').addEventListener('click', async () => {
