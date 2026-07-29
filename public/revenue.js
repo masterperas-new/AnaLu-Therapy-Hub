@@ -146,6 +146,18 @@ function renderOwedTable(filter) {
         });
         AppCommon.setMessage('Marked as paid.');
         await Promise.all([loadTotal(), loadMonth(), loadOwed(), loadFuture()]);
+        
+        // If viewing a single client in Revenue by Client, refresh that view
+        if (currentDrilldownClient) {
+          await loadClientRevenue();
+          const updatedClient = allClientRevenue.find(r => r.client_id === currentDrilldownClient.client_id);
+          if (updatedClient) {
+            currentDrilldownClient = updatedClient;
+            renderClientKpis(updatedClient);
+            allDrilldownRows = await AppCommon.api(`/ALTApi/appointments?clientId=${currentDrilldownClient.client_id}`);
+            renderDrilldownTable();
+          }
+        }
       } catch (err) {
         AppCommon.setMessage(err.message, true);
       }
@@ -336,6 +348,7 @@ const clientRevenueSelect = document.getElementById('clientRevenueSelect');
 const clientRevenueKpis = document.getElementById('clientRevenueKpis');
 const clientRevenueBody = document.getElementById('client-revenue-body');
 const clientBackBtn = document.getElementById('clientBackBtn');
+const clientViewTitle = document.getElementById('clientViewTitle');
 const clientDrilldown = document.getElementById('client-drilldown');
 const clientDrilldownTitle = document.getElementById('client-drilldown-title');
 const clientDrilldownBody = document.getElementById('client-drilldown-body');
@@ -434,6 +447,12 @@ function renderDrilldownTable() {
           AppCommon.setMessage('Marked as paid.');
           await Promise.all([loadTotal(), loadMonth(), loadOwed(), loadFuture(), loadClientRevenue()]);
           if (currentDrilldownClient) {
+            // Reload the current client's data and update KPIs
+            const updatedClient = allClientRevenue.find(r => r.client_id === currentDrilldownClient.client_id);
+            if (updatedClient) {
+              currentDrilldownClient = updatedClient;
+              renderClientKpis(updatedClient);
+            }
             allDrilldownRows = await AppCommon.api(`/ALTApi/appointments?clientId=${currentDrilldownClient.client_id}`);
             renderDrilldownTable();
           }
@@ -461,6 +480,7 @@ function showAllClients() {
   renderClientTable(allClientRevenue);
   clientRevenueKpis.classList.add('hidden');
   clientBackBtn.classList.add('hidden');
+  clientViewTitle.textContent = 'Viewing: All Clients';
   hideClientDrilldown();
 }
 
@@ -536,6 +556,7 @@ function initClientSearch() {
           const row = allClientRevenue.find(r => String(r.client_id) === id);
           renderClientTable(row ? [row] : []);
           renderClientKpis(row);
+          clientViewTitle.textContent = `Viewing: ${row.full_name}`;
           clientBackBtn.classList.remove('hidden');
           loadClientDrilldown(row);
         } else {
@@ -622,6 +643,7 @@ function renderClientTable(rows) {
       clientSearchSelect.setValue(r.client_id);
       renderClientTable([r]);
       renderClientKpis(r);
+      clientViewTitle.textContent = `Viewing: ${r.full_name}`;
       clientBackBtn.classList.remove('hidden');
       loadClientDrilldown(r);
     });
