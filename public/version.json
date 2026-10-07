@@ -1,7 +1,20 @@
 {
-  "version": "2.12.0",
-  "releaseDate": "2026-06-08",
+  "version": "2.12.1",
+  "releaseDate": "2026-10-07",
   "history": [
+    {
+      "version": "2.12.1",
+      "date": "2026-10-07",
+      "summary": "Revenue page fixes and therapist column in patient list.",
+      "changes": [
+        "Therapist name shown in Patient Registry (admin only)",
+        "Calendar past-appointment highlighting simplified and fixed",
+        "Owed popup in monthly revenue now shows only the selected month (Bug-03.26)",
+        "Revenue by Client totals refresh immediately after marking a payment as paid (Bug-01.26)",
+        "Client filter is kept after marking a payment, instead of resetting to all clients",
+        "Clearer, larger \"Back to All Clients\" button"
+      ]
+    },
     {
       "version": "2.12.0",
       "date": "2026-06-08",
