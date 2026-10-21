@@ -112,7 +112,7 @@ async function ensureClientForTherapist(clientId, therapistUserId) {
 }
 
 router.get('/', async (req, res) => {
-  const { db } = require("../db/database");
+  const { db, isPostgres } = require("../db/database");
   try {
     const { month, start, end, q, clientId, wireReceived, paymentType, from, to, userId } = req.query;
     const user = req.session.user;
@@ -133,7 +133,7 @@ router.get('/', async (req, res) => {
     }
 
     if (month) {
-      filters.push(`to_char(a.appointment_date, 'YYYY-MM') = $${paramIndex}`);
+      filters.push(`${isPostgres ? "to_char(a.appointment_date::timestamp, 'YYYY-MM')" : "strftime('%Y-%m', a.appointment_date)"} = $${paramIndex}`);
       params.push(month);
       paramIndex++;
     }

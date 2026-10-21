@@ -1,7 +1,16 @@
 {
-  "version": "2.12.1",
-  "releaseDate": "2026-10-07",
+  "version": "2.12.2",
+  "releaseDate": "2026-10-21",
   "history": [
+    {
+      "version": "2.12.2",
+      "date": "2026-10-21",
+      "summary": "Fix Patient Registry and Export Month XLS failing in production.",
+      "changes": [
+        "Fixed a database error (PostgreSQL GROUP BY) that stopped the patient list from loading after v2.12.1",
+        "Fixed \"Export Month XLS\" on the Revenue page failing with a database error"
+      ]
+    },
     {
       "version": "2.12.1",
       "date": "2026-10-07",

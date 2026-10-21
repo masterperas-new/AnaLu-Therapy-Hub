@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
        LEFT JOIN appointments a ON a.client_id = c.id
        LEFT JOIN users u ON c.created_by = u.id
        ${whereSql}
-       GROUP BY c.id
+       GROUP BY c.id, u.full_name
        ORDER BY c.full_name ASC`,
       params
     );
