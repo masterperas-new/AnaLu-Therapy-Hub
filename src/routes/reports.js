@@ -264,4 +264,84 @@ router.get('/by-client', async (req, res) => {
   }
 });
 
+/* Years in which the therapist has appointments, newest first (for the year chips) */
+router.get('/years', async (req, res) => {
+  const { db, isPostgres } = require('../db/database');
+  const user = req.session.user;
+  if (user.role === 'admin') {
+    return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+  }
+
+  try {
+    const yearExpr = isPostgres ? "to_char(appointment_date::timestamp, 'YYYY')" : "strftime('%Y', appointment_date)";
+    const rows = await db.all(
+      `SELECT DISTINCT ${yearExpr} AS year FROM appointments WHERE user_id = $1 ORDER BY year DESC`,
+      [user.id]
+    );
+    const years = rows.map((r) => Number(r.year)).filter((y) => Number.isInteger(y));
+    const current = new Date().getFullYear();
+    if (!years.includes(current)) years.unshift(current);
+    return res.json(years.sort((a, b) => b - a));
+  } catch (err) {
+    console.error('Error listing report years:', err);
+    return res.status(500).json({ error: 'Failed to list years.' });
+  }
+});
+
+/* Month-by-month figures for one year (trend chart and comparisons).
+   paid: marked paid. owed: unpaid and already happened. scheduled: unpaid and still to come. */
+router.get('/monthly-series', async (req, res) => {
+  const { db, isPostgres } = require('../db/database');
+  const user = req.session.user;
+  if (user.role === 'admin') {
+    return res.status(403).json({ error: 'Revenue reports are for therapists only.' });
+  }
+
+  const year = req.query.year;
+  if (!year || !/^\d{4}$/.test(year)) {
+    return res.status(400).json({ error: 'Year is required in YYYY format.' });
+  }
+
+  try {
+    const yearExpr = isPostgres ? "to_char(appointment_date::timestamp, 'YYYY')" : "strftime('%Y', appointment_date)";
+    const monthExpr = isPostgres ? "to_char(appointment_date::timestamp, 'MM')" : "strftime('%m', appointment_date)";
+    const dateCompare = isPostgres ? 'appointment_date::timestamp::date' : 'date(appointment_date)';
+
+    const rows = await db.all(
+      `
+        SELECT
+          ${monthExpr} AS month,
+          COUNT(*) AS appointments,
+          SUM(CASE WHEN wire_received = 1 THEN 1 ELSE 0 END) AS paid_appointments,
+          SUM(CASE WHEN wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN 1 ELSE 0 END) AS owed_appointments,
+          COALESCE(SUM(CASE WHEN wire_received = 1 THEN fee_cents ELSE 0 END), 0) AS paid_cents,
+          COALESCE(SUM(CASE WHEN wire_received = 0 AND ${dateCompare} <= CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS owed_cents,
+          COALESCE(SUM(CASE WHEN wire_received = 0 AND ${dateCompare} > CURRENT_DATE THEN fee_cents ELSE 0 END), 0) AS scheduled_cents
+        FROM appointments
+        WHERE ${yearExpr} = $1 AND user_id = $2
+        GROUP BY ${monthExpr}
+      `,
+      [year, user.id]
+    );
+
+    const byMonth = new Map(rows.map((r) => [Number(r.month), r]));
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const r = byMonth.get(i + 1) || {};
+      return {
+        month: `${year}-${String(i + 1).padStart(2, '0')}`,
+        appointments: Number(r.appointments || 0),
+        paidAppointments: Number(r.paid_appointments || 0),
+        owedAppointments: Number(r.owed_appointments || 0),
+        paidCents: Number(r.paid_cents || 0),
+        owedCents: Number(r.owed_cents || 0),
+        scheduledCents: Number(r.scheduled_cents || 0),
+      };
+    });
+    return res.json({ year: Number(year), months });
+  } catch (err) {
+    console.error('Error building monthly series:', err);
+    return res.status(500).json({ error: 'Failed to build monthly figures.' });
+  }
+});
+
 module.exports = router;

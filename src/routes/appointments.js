@@ -197,6 +197,7 @@ router.get('/', async (req, res) => {
         a.client_id,
         c.full_name,
         c.condition_notes,
+        c.phone AS client_phone,
         a.appointment_date,
         a.location,
         a.fee_cents,
@@ -599,6 +600,52 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     console.error('Error updating appointment:', err);
     return res.status(500).json({ error: 'Failed to update appointment.' });
+  }
+});
+
+/* Mark several appointments as paid at once (Outstanding Payments multi-select).
+   All or nothing: if any id is unknown, already paid or not the therapist's own,
+   nothing is changed. */
+router.patch('/payment-received', async (req, res) => {
+  const { db } = require("../db/database");
+  try {
+    const user = req.session.user;
+    const body = req.body || {};
+    const ids = Array.isArray(body.ids) ? [...new Set(body.ids.map(Number))] : [];
+
+    if (!ids.length || ids.length > 200 || !ids.every((id) => Number.isInteger(id) && id > 0)) {
+      return res.status(400).json({ error: 'Select between 1 and 200 appointments.' });
+    }
+
+    const paymentDate = new Date().toISOString();
+    const safePaymentType = body.paymentType || null;
+    const idList = ids.map((_, i) => `$${i + 1}`).join(', ');
+    const ownerParams = user.role !== 'admin' ? [user.id] : [];
+    const ownerFilter = user.role !== 'admin' ? `AND user_id = $${ids.length + 1}` : '';
+
+    const found = await db.all(
+      `SELECT id FROM appointments WHERE id IN (${idList}) AND wire_received = 0 ${ownerFilter}`,
+      [...ids, ...ownerParams]
+    );
+    if (found.length !== ids.length) {
+      return res.status(400).json({ error: 'Some of these appointments are already paid or not available. Nothing was changed; refresh and try again.' });
+    }
+
+    // Placeholders must appear in the same order as the values: the SQLite
+    // adapter turns each $n into a positional "?".
+    const n = ids.length;
+    const updateIdList = ids.map((_, i) => `$${i + 3}`).join(', ');
+    const updateOwnerFilter = user.role !== 'admin' ? `AND user_id = $${n + 3}` : '';
+    const result = await db.run(
+      `UPDATE appointments SET wire_received = 1, wire_received_date = $1, payment_type = COALESCE($2, payment_type)
+       WHERE id IN (${updateIdList}) AND wire_received = 0 ${updateOwnerFilter}`,
+      [paymentDate, safePaymentType, ...ids, ...ownerParams]
+    );
+
+    return res.json({ updated: result.changes, paymentDate, paymentType: safePaymentType });
+  } catch (err) {
+    console.error('Error updating payment status (batch):', err);
+    return res.status(500).json({ error: 'Failed to update payment status.' });
   }
 });
 

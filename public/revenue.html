@@ -63,21 +63,45 @@
 
         <!-- Tab 1: Total Monthly & Future -->
         <div id="rev-tab-overview" class="rev-tab-content">
-          <section class="card">
-            <h3 style="margin-bottom:10px">Total Revenue</h3>
+          <section class="card" id="totalCard">
+            <h3 id="totalTitle" style="margin-bottom:10px">Total Revenue</h3>
+            <div id="yearChips" class="rev-year-chips" role="group" aria-label="Year"></div>
+            <p id="yearNote" class="rev-note"></p>
             <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px">💡 Tip: Click the <strong>Owed</strong> cards to view and manage outstanding payments.</p>
             <div id="totalKpis" class="revenue-kpis"></div>
+            <div id="yearCompare" class="rev-compare"></div>
+            <div id="chartBlock" class="rev-chart-block hidden">
+              <div class="rev-chart-head">
+                <strong id="chartTitle">Month by month</strong>
+                <div id="chartLegend" class="rev-legend"></div>
+              </div>
+              <div class="rev-chart-wrap">
+                <svg id="revChart" class="rev-chart" role="img" aria-label="Revenue per month"></svg>
+                <div id="revTip" class="rev-tip hidden"></div>
+              </div>
+              <div id="tapInfo" class="rev-tapinfo"></div>
+              <div class="rev-chart-foot">
+                <span id="chartHint" class="rev-chart-hint"></span>
+                <button type="button" id="chartTableToggle" class="rev-link-btn">Show as table</button>
+              </div>
+              <div id="chartTable" class="hidden" style="overflow-x:auto;margin-top:8px"></div>
+            </div>
           </section>
 
-          <section class="card">
+          <section class="card" id="monthCard">
+            <div id="monthCrumb" class="hidden" style="margin-bottom:6px">
+              <button type="button" id="monthCrumbBack" class="rev-link-btn"></button>
+            </div>
             <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
-              <h3 id="month-label" style="margin:0;flex:1;min-width:120px">Monthly</h3>
-              <div style="display:flex;gap:8px;align-items:end">
-                <div><label for="monthInput">Month</label><input id="monthInput" type="month" /></div>
-                <button id="loadMonth" type="button" style="margin-top:0">Load</button>
+              <div class="rev-stepper">
+                <button type="button" id="prevMonth" class="outline" aria-label="Previous month">&lsaquo;</button>
+                <h3 id="month-label">Monthly</h3>
+                <button type="button" id="nextMonth" class="outline" aria-label="Next month">&rsaquo;</button>
               </div>
+              <div class="rev-monthpick"><label for="monthInput">Month</label><input id="monthInput" type="month" /></div>
             </div>
             <div id="monthKpis" class="revenue-kpis" style="margin-top:12px"></div>
+            <div id="monthCompare" class="rev-compare"></div>
             <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
               <button id="exportMonthBtn" type="button" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export Month XLS</button>
               <button id="exportGlobalBtn" type="button" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export All XLS</button>
@@ -107,14 +131,15 @@
           <div style="overflow-x:auto">
             <table class="appt-table" id="client-revenue-table">
               <thead>
-                <tr>
-                  <th>Client</th>
-                  <th>Appts</th>
-                  <th>Paid</th>
-                  <th>Owed</th>
-                  <th>Total (€)</th>
-                  <th>Paid (€)</th>
-                  <th>Owed (€)</th>
+                <tr id="client-revenue-head">
+                  <th data-sort="full_name">Client</th>
+                  <th data-sort="total_appointments">Appts</th>
+                  <th data-sort="paid_appointments">Paid</th>
+                  <th data-sort="owed_appointments">Owed</th>
+                  <th data-sort="total_cents">Total (€)</th>
+                  <th data-sort="paid_cents">Paid (€)</th>
+                  <th data-sort="owed_cents">Owed (€)</th>
+                  <th data-sort="oldest_owed_days" id="oldestOwedHead">Oldest owed</th>
                 </tr>
               </thead>
               <tbody id="client-revenue-body"></tbody>
@@ -166,26 +191,28 @@
           <button type="button" id="exportOwedBtn" class="outline" style="font-size:0.82rem;padding:4px 10px">⬇ Export</button>
           <button type="button" id="close-owed" class="outline">Close</button>
         </div>
-        <input id="owedSearch" type="text" placeholder="Search by name, date or notes…" style="margin-bottom:10px" />
-        <div style="overflow-x:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>Patient</th>
-                <th>Date</th>
-                <th>Fee</th>
-                <th>Notes</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="owed-table-body"></tbody>
-          </table>
+        <div id="owedAging" class="rev-aging"></div>
+        <div class="rev-owed-tools">
+          <div class="rev-seg" role="group" aria-label="View">
+            <button type="button" data-owed-view="patient" class="active" id="viewPatientBtn">By patient</button>
+            <button type="button" data-owed-view="appt" id="viewApptBtn">By appointment</button>
+          </div>
+          <span id="owedFilterNote" class="rev-filter-note"></span>
         </div>
+        <input id="owedSearch" type="text" placeholder="Search by name, date or notes…" style="margin:10px 0" />
+        <div id="owedList"></div>
         <p id="owedEmpty" class="hidden" style="color:var(--muted);font-size:0.9rem"></p>
-        <div id="owed-pager" class="pager hidden">
-          <button type="button" id="owed-pager-prev" class="outline pager-btn">&lsaquo; Prev</button>
-          <span id="owed-pager-info" class="pager-info"></span>
-          <button type="button" id="owed-pager-next" class="outline pager-btn">Next &rsaquo;</button>
+        <div id="owedConfirm" class="rev-confirm hidden" role="alertdialog" aria-labelledby="owedConfirmText">
+          <p id="owedConfirmText"></p>
+          <div class="rev-confirm-actions">
+            <button type="button" id="owedConfirmNo" class="outline"></button>
+            <button type="button" id="owedConfirmYes" class="action-save"></button>
+          </div>
+        </div>
+        <div id="owedSelBar" class="rev-selbar hidden">
+          <span id="owedSelInfo"></span>
+          <button type="button" id="owedSelClear" class="outline"></button>
+          <button type="button" id="owedSelMark" class="action-save"></button>
         </div>
       </aside>
 

@@ -1,12 +1,20 @@
 {
-  "version": "2.12.3",
+  "version": "2.13.0",
   "releaseDate": "2026-10-29",
   "history": [
     {
-      "version": "2.12.3",
+      "version": "2.13.0",
       "date": "2026-10-29",
-      "summary": "Security update: patient privacy between therapists, safer sign-in and passwords.",
+      "summary": "Revenue: year filter, month-by-month chart with comparison, payment chasing. Security update.",
       "changes": [
+        "Revenue totals filter by year (current year by default) with a reminder of the period shown",
+        "Comparison with the previous year (Total, Received, Owed), always shown",
+        "Month-by-month chart: paid, owed and scheduled per month, with last year for reference; click a month to open it",
+        "Month view: arrows to step between months, no Load button, comparison with the previous month and the same month last year",
+        "Outstanding Payments: payment age (under 15 / 15–30 / over 30 days), grouped by patient, oldest first",
+        "Call and WhatsApp buttons for each patient with unpaid sessions",
+        "Select several appointments and mark them as paid in one step",
+        "Revenue by Client: new Oldest owed column and sortable columns",
         "Therapists can only open, book and comment on their own patients",
         "Text such as names, notes and comments is always shown as plain text",
         "Blocking a user, changing their role or resetting their password takes effect immediately",
