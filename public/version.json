@@ -1,7 +1,22 @@
 {
-  "version": "2.12.2",
-  "releaseDate": "2026-10-21",
+  "version": "2.12.3",
+  "releaseDate": "2026-10-29",
   "history": [
+    {
+      "version": "2.12.3",
+      "date": "2026-10-29",
+      "summary": "Security update: patient privacy between therapists, safer sign-in and passwords.",
+      "changes": [
+        "Therapists can only open, book and comment on their own patients",
+        "Text such as names, notes and comments is always shown as plain text",
+        "Blocking a user, changing their role or resetting their password takes effect immediately",
+        "Changing your own password now asks for your current password",
+        "New passwords need at least 8 characters (existing passwords keep working)",
+        "Repeated wrong passwords pause sign-in for that username for 15 minutes",
+        "Only admins can change the default fee",
+        "Updated third-party packages with known security fixes"
+      ]
+    },
     {
       "version": "2.12.2",
       "date": "2026-10-21",

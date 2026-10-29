@@ -5,6 +5,7 @@ const session = require('express-session');
 
 const path = require('path');
 const { initializeDatabase } = require('./db/database');
+const { validateSession } = require('./sessionCheck');
 const authRouter = require('./routes/auth');
 const clientsRouter = require('./routes/clients');
 const appointmentsRouter = require('./routes/appointments');
@@ -19,6 +20,22 @@ const port = Number(process.env.PORT) || 8080;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // --- Register middleware and routes synchronously (required for Vercel) ---
+
+app.disable('x-powered-by');
+
+// Security headers. The pages only load the app's own scripts and styles, so the
+// Content-Security-Policy allows nothing else (inline style attributes are used widely).
+app.use((_req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+      "font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  );
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 app.use(express.json());
 
@@ -77,11 +94,16 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-function requireAuth(req, res, next) {
-  if (req.session && req.session.authenticated && req.session.user) {
-    return next();
+async function requireAuth(req, res, next) {
+  try {
+    if (await validateSession(req)) {
+      return next();
+    }
+    return res.status(401).json({ error: 'Your session has ended. Please sign in again.' });
+  } catch (error) {
+    console.error('Session check error:', error.message);
+    return res.status(500).json({ error: 'Failed to check your session.' });
   }
-  return res.status(401).json({ error: 'Authentication required.' });
 }
 
 function requireAdmin(req, res, next) {

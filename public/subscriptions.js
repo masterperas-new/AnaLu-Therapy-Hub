@@ -162,7 +162,7 @@
       const balance = computeBalance(sub);
 
       tr.innerHTML = `
-        <td>${sub.full_name}</td>
+        <td>${AppCommon.escapeHtml(sub.full_name)}</td>
         <td>${price}</td>
         <td><span class="${statusCls}">${statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}</span></td>
         <td style="font-size:0.9rem;color:var(--muted);white-space:nowrap">${formatDate(sub.last_paid_date)}</td>
@@ -302,8 +302,8 @@
           <span class="small">${formatDate(p.paid_date)}</span>
         </div>
         <div class="rec-card-detail">Covers until: ${formatDate(p.covers_until)}</div>
-        ${p.payment_method ? `<div class="rec-card-detail">Method: ${p.payment_method}</div>` : ''}
-        ${p.notes ? `<div class="rec-card-detail">${p.notes}</div>` : ''}
+        ${p.payment_method ? `<div class="rec-card-detail">Method: ${AppCommon.escapeHtml(p.payment_method)}</div>` : ''}
+        ${p.notes ? `<div class="rec-card-detail">${AppCommon.escapeHtml(p.notes)}</div>` : ''}
         <div class="rec-card-actions" style="display:flex;gap:6px">
           <button type="button" class="outline tiny-btn edit-pay-btn">Edit</button>
           <button type="button" class="outline tiny-btn delete-pay-btn" style="color:var(--danger);border-color:var(--danger)">Delete</button>
@@ -441,7 +441,7 @@
       r.outstandingDetails.forEach((d) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${d.full_name}</td>
+          <td>${AppCommon.escapeHtml(d.full_name)}</td>
           <td>${euroFromCents(d.monthly_price_cents)}</td>
           <td>${d.months_overdue}</td>
           <td><span class="status-owed">${euroFromCents(d.owed_cents)}</span></td>

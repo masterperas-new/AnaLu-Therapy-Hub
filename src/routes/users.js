@@ -1,7 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const { passwordStamp } = require('../sessionCheck');
 
 const router = express.Router();
+
+const MIN_PASSWORD_LENGTH = 8;
 
 /* List active therapists — any authenticated user (used by appointment form) */
 router.get('/therapists', async (req, res) => {
@@ -49,8 +52,8 @@ router.post('/', async (req, res) => {
 
   const { username, password, role, fullName, phone } = req.body;
 
-  if (!username || !username.trim() || !password || password.length < 4) {
-    return res.status(400).json({ error: 'Username and password (min 4 chars) are required.' });
+  if (!username || !username.trim() || !password || password.length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `Username and password (at least ${MIN_PASSWORD_LENGTH} characters) are required.` });
   }
 
   const safeRole = role === 'admin' ? 'admin' : 'therapist';
@@ -90,10 +93,25 @@ router.put('/:id', async (req, res) => {
     return res.status(403).json({ error: 'You can only update your own profile.' });
   }
 
-  const { fullName, phone, password, role } = req.body;
+  const { fullName, phone, password, currentPassword, role } = req.body;
 
   if (!fullName || !fullName.trim()) {
     return res.status(400).json({ error: 'Full name is required.' });
+  }
+
+  if (password && password.length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+  }
+
+  /* Changing your own password needs your current one */
+  if (password && isSelf) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Enter your current password to set a new one (in My Profile).' });
+    }
+    const self = await db.get('SELECT password_hash FROM users WHERE id = $1', [userId]);
+    if (!self || !bcrypt.compareSync(currentPassword, self.password_hash)) {
+      return res.status(403).json({ error: 'Current password is incorrect.' });
+    }
   }
 
   const fields = ['full_name = $1', 'phone = $2'];
@@ -109,9 +127,11 @@ router.put('/:id', async (req, res) => {
   }
 
   /* Password change */
-  if (password && password.length >= 4) {
+  let newHash = null;
+  if (password) {
+    newHash = bcrypt.hashSync(password, 10);
     fields.push(`password_hash = $${paramCount}`);
-    params.push(bcrypt.hashSync(password, 10));
+    params.push(newHash);
     paramCount++;
   }
 
@@ -127,10 +147,12 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    /* If self, update session */
+    /* If self, update session. A new password keeps this session signed in;
+       other sessions of this user end on their next request. */
     if (isSelf) {
       req.session.user.fullName = fullName.trim();
       req.session.user.phone = phone || null;
+      if (newHash) req.session.passwordStamp = passwordStamp(newHash);
     }
 
     return res.json({ id: userId });

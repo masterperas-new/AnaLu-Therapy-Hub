@@ -207,11 +207,18 @@ async function initializeDatabaseSchema() {
         ['NunFur']
       );
       if (!adminUser) {
-        const hash = bcrypt.hashSync('NunFurPass', 10);
-        await db.run(
-          "INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)",
-          ['NunFur', hash, 'admin', 'Nuno Furtado', null, 'en']
-        );
+        // First admin of a brand-new database. The password comes from the
+        // ADMIN_INITIAL_PASSWORD setting and is never stored in the code.
+        const initialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+        if (initialPassword) {
+          const hash = bcrypt.hashSync(initialPassword, 10);
+          await db.run(
+            "INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['NunFur', hash, 'admin', 'Nuno Furtado', null, 'en']
+          );
+        } else {
+          console.warn('[DB] No admin account exists and ADMIN_INITIAL_PASSWORD is not set, so no admin was created.');
+        }
       }
 
       // Role-based language defaults for legacy rows
@@ -435,11 +442,18 @@ async function initializeDatabaseSchema() {
         ['NunFur']
       );
       if (!adminUser) {
-        const hash = bcrypt.hashSync('NunFurPass', 10);
-        await db.run(
-          "INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)",
-          ['NunFur', hash, 'admin', 'Nuno Furtado', null, 'en']
-        );
+        // First admin of a brand-new database. The password comes from the
+        // ADMIN_INITIAL_PASSWORD setting and is never stored in the code.
+        const initialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+        if (initialPassword) {
+          const hash = bcrypt.hashSync(initialPassword, 10);
+          await db.run(
+            "INSERT INTO users (username, password_hash, role, full_name, phone, language) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['NunFur', hash, 'admin', 'Nuno Furtado', null, 'en']
+          );
+        } else {
+          console.warn('[DB] No admin account exists and ADMIN_INITIAL_PASSWORD is not set, so no admin was created.');
+        }
       }
 
       // Role-based language defaults for legacy rows

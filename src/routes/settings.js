@@ -20,6 +20,9 @@ router.get('/', async (_req, res) => {
 
 router.put('/', async (req, res) => {
   const { db } = require('../db/database');
+  if (req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
   try {
     const defaultFeeAmount = Number(req.body.defaultFeeAmount);
     const defaultFeeCents = Math.round(defaultFeeAmount * 100);

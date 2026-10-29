@@ -119,10 +119,10 @@ function renderOwedTable(filter) {
     const notes = a.comments || a.notes || '';
 
     tr.innerHTML = `
-      <td>${a.full_name}</td>
+      <td>${AppCommon.escapeHtml(a.full_name)}</td>
       <td>${date}</td>
       <td>${fee}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${notes}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${AppCommon.escapeHtml(notes)}</td>
       <td></td>
     `;
 
@@ -419,8 +419,8 @@ function renderDrilldownTable() {
       <td>${new Date(a.appointment_date).toLocaleString('en-GB')}</td>
       <td>${status}</td>
       <td>${AppCommon.euroFromCents(a.fee_cents)}</td>
-      <td>${a.payment_type || '-'}</td>
-      <td>${a.comments || a.notes || '-'}</td>
+      <td>${AppCommon.escapeHtml(a.payment_type || '-')}</td>
+      <td>${AppCommon.escapeHtml(a.comments || a.notes || '-')}</td>
       <td></td>
     `;
 
@@ -589,7 +589,7 @@ function renderClientKpis(row) {
       <span class="rev-kpi-label">Paid</span>
       <span class="rev-kpi-val">${row.paid_appointments}</span>
     </div>
-    <div class="rev-kpi rev-kpi--warn rev-kpi--clickable" data-action="show-client-owed" data-client="${row.full_name}">
+    <div class="rev-kpi rev-kpi--warn rev-kpi--clickable" data-action="show-client-owed" data-client="${AppCommon.escapeHtml(row.full_name)}">
       <span class="rev-kpi-label">Owed</span>
       <span class="rev-kpi-val">${row.owed_appointments}</span>
     </div>
@@ -601,7 +601,7 @@ function renderClientKpis(row) {
       <span class="rev-kpi-label">Paid Revenue</span>
       <span class="rev-kpi-val">${AppCommon.euroFromCents(row.paid_cents)}</span>
     </div>
-    <div class="rev-kpi rev-kpi--warn rev-kpi--clickable" data-action="show-client-owed" data-client="${row.full_name}">
+    <div class="rev-kpi rev-kpi--warn rev-kpi--clickable" data-action="show-client-owed" data-client="${AppCommon.escapeHtml(row.full_name)}">
       <span class="rev-kpi-label">Owed Revenue</span>
       <span class="rev-kpi-val">${AppCommon.euroFromCents(row.owed_cents)}</span>
     </div>
@@ -623,13 +623,13 @@ function renderClientTable(rows) {
     tr.className = 'appt-row';
     tr.style.cursor = 'pointer';
     tr.innerHTML = `
-      <td>${r.full_name}</td>
+      <td>${AppCommon.escapeHtml(r.full_name)}</td>
       <td>${r.total_appointments}</td>
       <td>${r.paid_appointments}</td>
-      <td>${r.owed_appointments > 0 ? `<span class="status-owed clickable-owed" data-client="${r.full_name}">${r.owed_appointments}</span>` : '0'}</td>
+      <td>${r.owed_appointments > 0 ? `<span class="status-owed clickable-owed" data-client="${AppCommon.escapeHtml(r.full_name)}">${r.owed_appointments}</span>` : '0'}</td>
       <td>${AppCommon.euroFromCents(r.total_cents)}</td>
       <td>${AppCommon.euroFromCents(r.paid_cents)}</td>
-      <td>${r.owed_cents > 0 ? `<span class="status-owed clickable-owed" data-client="${r.full_name}">${AppCommon.euroFromCents(r.owed_cents)}</span>` : '€0.00'}</td>
+      <td>${r.owed_cents > 0 ? `<span class="status-owed clickable-owed" data-client="${AppCommon.escapeHtml(r.full_name)}">${AppCommon.euroFromCents(r.owed_cents)}</span>` : '€0.00'}</td>
     `;
     // Attach click handlers to owed spans directly
     tr.querySelectorAll('.clickable-owed').forEach(span => {

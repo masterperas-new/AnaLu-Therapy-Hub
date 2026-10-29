@@ -267,7 +267,7 @@ function openPatientInfo(clientId) {
   patientInfoEmail.textContent = client.email || '-';
   const addrEl = document.getElementById('patient-info-address');
   if (addrEl) {
-    addrEl.innerHTML = client.address ? `${client.address} ${AppCommon.mapsLink(client.address)}` : '-';
+    addrEl.innerHTML = client.address ? `${AppCommon.escapeHtml(client.address)} ${AppCommon.mapsLink(client.address)}` : '-';
   }
 
   patientInfoOverlay.classList.remove('hidden');
@@ -327,16 +327,16 @@ function renderAppointmentsTable(rows) {
       <td>${new Date(appointment.appointment_date).toLocaleString('en-GB')}${appointment.recurrence_id ? ' <span class="rec-icon" title="Recurring appointment">↻</span>' : ''}</td>
       <td>
         <div class="name-cell">
-          <span>${appointment.full_name}</span>
+          <span>${AppCommon.escapeHtml(appointment.full_name)}</span>
           <button type="button" class="outline tiny-btn patient-info-btn" data-client-id="${appointment.client_id}">Info</button>
         </div>
       </td>
-      <td>${appointment.location} ${AppCommon.mapsLink(appointment.location)}</td>
+      <td>${AppCommon.escapeHtml(appointment.location)} ${AppCommon.mapsLink(appointment.location)}</td>
       <td>${appointment.duration_minutes}m</td>
       ${!isAdmin ? `<td>${AppCommon.euroFromCents(appointment.fee_cents)}</td>` : ''}
       ${!isAdmin ? `<td><span class="${appointment.wire_received ? 'status-paid' : 'status-owed'}">${appointment.wire_received ? 'PAID' : 'OWED'}</span></td>` : ''}
-      ${!isAdmin ? `<td>${appointment.payment_type || '-'}</td>` : ''}
-      ${isAdmin ? `<td>${appointment.therapist_name || '-'}</td>` : ''}
+      ${!isAdmin ? `<td>${AppCommon.escapeHtml(appointment.payment_type || '-')}</td>` : ''}
+      ${isAdmin ? `<td>${AppCommon.escapeHtml(appointment.therapist_name || '-')}</td>` : ''}
     `;
 
     const openForEdit = async () => {
@@ -1275,12 +1275,12 @@ function initRecurringForm() {
         const dayName = DAY_NAMES[r.day_of_week] || '';
         card.innerHTML = `
           <div class="rec-card-head">
-            <strong>${r.client_name}</strong>
+            <strong>${AppCommon.escapeHtml(r.client_name)}</strong>
             <span class="rec-card-status ${r.status}">${r.status}</span>
           </div>
           <div class="rec-card-detail">${freq} on ${dayName}s at ${r.time_of_day}</div>
           <div class="rec-card-detail">${r.start_date} → ${r.end_date}</div>
-          <div class="rec-card-detail">${r.therapist_name || ''} · ${r.address || ''}</div>
+          <div class="rec-card-detail">${AppCommon.escapeHtml(r.therapist_name || '')} · ${AppCommon.escapeHtml(r.address || '')}</div>
           ${r.status === 'active' ? '<div class="rec-card-actions"><button type="button" class="outline danger cancel-rec-btn" data-id="' + r.id + '">Cancel Future Appointments</button></div>' : ''}
         `;
         recurrencesList.appendChild(card);

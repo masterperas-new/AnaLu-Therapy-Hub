@@ -161,10 +161,10 @@ function renderPatientsTable() {
     tr.tabIndex = 0;
     const isAdmin = AppCommon.getUser()?.role === 'admin';
     tr.innerHTML = `
-      <td>${client.full_name}</td>
-      ${isAdmin ? `<td>${client.therapist_name || '-'}</td>` : ''}
-      <td>${client.phone || '-'}</td>
-      <td>${client.email || '-'}</td>
+      <td>${AppCommon.escapeHtml(client.full_name)}</td>
+      ${isAdmin ? `<td>${AppCommon.escapeHtml(client.therapist_name || '-')}</td>` : ''}
+      <td>${AppCommon.escapeHtml(client.phone || '-')}</td>
+      <td>${AppCommon.escapeHtml(client.email || '-')}</td>
       ${!isAdmin ? `<td class="balance-cell" data-client-id="${client.id}"><span class="small">...</span></td>` : ''}
       <td>
         <div style="display:flex;gap:6px">
@@ -307,8 +307,8 @@ function renderCommentsTable(filter) {
   rows.forEach((row) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="white-space:nowrap;vertical-align:top">${row.comment_date}</td>
-      <td style="white-space:pre-wrap">${row.body}</td>
+      <td style="white-space:nowrap;vertical-align:top">${AppCommon.escapeHtml(row.comment_date)}</td>
+      <td style="white-space:pre-wrap">${AppCommon.escapeHtml(row.body)}</td>
       <td></td>
     `;
 
@@ -416,9 +416,9 @@ function renderInsurancesTable() {
   allInsurances.forEach((row) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${row.insurance_name}</td>
-      <td>${row.provider_name}</td>
-      <td>${row.policy_number || '—'}</td>
+      <td>${AppCommon.escapeHtml(row.insurance_name)}</td>
+      <td>${AppCommon.escapeHtml(row.provider_name)}</td>
+      <td>${AppCommon.escapeHtml(row.policy_number || '—')}</td>
       <td></td>
     `;
 
@@ -610,11 +610,11 @@ function renderHistoryInfo() {
   }
 
   historyInfo.innerHTML = `
-    <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${client.phone || '—'}</span></div>
-    <div class="info-row"><span class="info-label">Email</span><span class="info-value">${client.email || '—'}</span></div>
-    <div class="info-row"><span class="info-label">Address</span><span class="info-value">${client.address ? `${client.address} ${AppCommon.mapsLink(client.address)}` : '—'}</span></div>
-    <div class="info-row"><span class="info-label">NIF</span><span class="info-value">${client.nif || '—'}</span></div>
-    <div class="info-row"><span class="info-label">Condition</span><span class="info-value">${client.condition_notes || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Phone</span><span class="info-value">${AppCommon.escapeHtml(client.phone || '—')}</span></div>
+    <div class="info-row"><span class="info-label">Email</span><span class="info-value">${AppCommon.escapeHtml(client.email || '—')}</span></div>
+    <div class="info-row"><span class="info-label">Address</span><span class="info-value">${client.address ? `${AppCommon.escapeHtml(client.address)} ${AppCommon.mapsLink(client.address)}` : '—'}</span></div>
+    <div class="info-row"><span class="info-label">NIF</span><span class="info-value">${AppCommon.escapeHtml(client.nif || '—')}</span></div>
+    <div class="info-row"><span class="info-label">Condition</span><span class="info-value">${AppCommon.escapeHtml(client.condition_notes || '—')}</span></div>
     <div class="info-kpis">
       ${kpisHtml}
     </div>
@@ -637,10 +637,10 @@ function renderHistoryTable() {
     const isAdmin = AppCommon.getUser()?.role === 'admin';
     const statusClass = row.wire_received ? 'status-paid' : 'status-owed';
     const statusLabel = row.wire_received ? 'PAID' : 'OWED';
-    const payType = row.payment_type ? ` (${row.payment_type})` : '';
+    const payType = row.payment_type ? ` (${AppCommon.escapeHtml(row.payment_type)})` : '';
     tr.innerHTML = `
       <td>${new Date(row.appointment_date).toLocaleString('en-GB')}</td>
-      <td class="small">${row.location} ${AppCommon.mapsLink(row.location)}</td>
+      <td class="small">${AppCommon.escapeHtml(row.location)} ${AppCommon.mapsLink(row.location)}</td>
       <td>${row.duration_minutes}m</td>
       ${!isAdmin ? `<td>${AppCommon.euroFromCents(row.fee_cents)}</td>` : ''}
       ${!isAdmin ? `<td><span class="${statusClass}">${statusLabel}${payType}</span></td>` : ''}
@@ -756,15 +756,15 @@ async function checkDuplicates() {
     if (nifDups.length) {
       html += '<div style="margin-bottom:6px"><strong>Same NIF:</strong></div><ul style="margin:0 0 8px 16px;padding:0">';
       nifDups.forEach(d => {
-        html += `<li>"${d.name1}" (${d.therapist1 || 'unassigned'}) and "${d.name2}" (${d.therapist2 || 'unassigned'}) — NIF ${d.nif}</li>`;
+        html += `<li>"${AppCommon.escapeHtml(d.name1)}" (${AppCommon.escapeHtml(d.therapist1 || 'unassigned')}) and "${AppCommon.escapeHtml(d.name2)}" (${AppCommon.escapeHtml(d.therapist2 || 'unassigned')}) — NIF ${AppCommon.escapeHtml(d.nif)}</li>`;
       });
       html += '</ul>';
     }
     if (nameDups.length) {
       html += '<div style="margin-bottom:6px"><strong>Same Name:</strong></div><ul style="margin:0 0 0 16px;padding:0">';
       nameDups.forEach(d => {
-        const nifInfo = d.nif1 || d.nif2 ? ` (NIF: ${d.nif1 || '—'} / ${d.nif2 || '—'})` : '';
-        html += `<li>"${d.name1}" (${d.therapist1 || 'unassigned'}) and "${d.name2}" (${d.therapist2 || 'unassigned'})${nifInfo}</li>`;
+        const nifInfo = d.nif1 || d.nif2 ? ` (NIF: ${AppCommon.escapeHtml(d.nif1 || '—')} / ${AppCommon.escapeHtml(d.nif2 || '—')})` : '';
+        html += `<li>"${AppCommon.escapeHtml(d.name1)}" (${AppCommon.escapeHtml(d.therapist1 || 'unassigned')}) and "${AppCommon.escapeHtml(d.name2)}" (${AppCommon.escapeHtml(d.therapist2 || 'unassigned')})${nifInfo}</li>`;
       });
       html += '</ul>';
     }

@@ -68,10 +68,12 @@
         <section class="card">
           <h2>Change Password</h2>
           <form id="password-form">
+            <label for="currentPwd">Current Password</label>
+            <input id="currentPwd" name="currentPassword" type="password" required autocomplete="current-password" />
             <label for="newPwd">New Password</label>
-            <input id="newPwd" name="password" type="password" required minlength="4" autocomplete="new-password" />
+            <input id="newPwd" name="password" type="password" required minlength="8" autocomplete="new-password" />
             <label for="confirmPwd">Confirm Password</label>
-            <input id="confirmPwd" name="confirm" type="password" required minlength="4" autocomplete="new-password" />
+            <input id="confirmPwd" name="confirm" type="password" required minlength="8" autocomplete="new-password" />
             <button type="submit" class="action-save">Update Password</button>
           </form>
         </section>

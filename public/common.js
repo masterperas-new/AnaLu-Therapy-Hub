@@ -258,7 +258,7 @@
     const roleLabel = currentUser.role === 'admin' ? t('role_admin') : t('role_therapist');
     const selectedLanguage = normalizeLanguage(currentUser.language, currentUser.role);
     userStatus.innerHTML =
-      `<span id="env-badge" class="env-badge"></span><a href="/profile.html" class="user-name">${currentUser.fullName}</a>` +
+      `<span id="env-badge" class="env-badge"></span><a href="/profile.html" class="user-name">${escapeHtml(currentUser.fullName)}</a>` +
       `<div class="user-role">${roleLabel}</div>` +
       `<div class="user-language"><label for="user-language-select">${t('language')}</label> <select id="user-language-select"><option value="en">EN</option><option value="pt-PT">PT-PT</option></select></div>` +
       `<div class="user-clock" id="live-clock"></div>` +
@@ -423,9 +423,9 @@
 
       const details = overlay.querySelector('.confirm-details');
       details.innerHTML = `
-        <p><strong>${name}</strong></p>
-        <p>${date}</p>
-        <p>${fee}</p>`;
+        <p><strong>${escapeHtml(name)}</strong></p>
+        <p>${escapeHtml(date)}</p>
+        <p>${escapeHtml(fee)}</p>`;
 
       overlay.classList.add('open');
 
@@ -445,6 +445,17 @@
       overlay.querySelector('.confirm-cancel').addEventListener('click', onCancel);
       overlay.addEventListener('click', onBackdrop);
     });
+  }
+
+  // Escape text before putting it into HTML, so names, notes and comments are
+  // always shown as text and never run as code.
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function mapsLink(address) {
@@ -732,6 +743,7 @@
     confirmPayment,
     getUser: () => currentUser,
     mapsLink,
+    escapeHtml,
     attachPasswordStrength,
     createSearchSelect,
     exportToXls,

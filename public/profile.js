@@ -56,6 +56,7 @@
           fullName: document.getElementById('profileName').value,
           phone: document.getElementById('profilePhone').value || null,
           password: pwd,
+          currentPassword: fd.get('currentPassword'),
         }),
       });
       passwordForm.reset();

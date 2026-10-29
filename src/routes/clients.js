@@ -2,6 +2,33 @@ const express = require('express');
 
 const router = express.Router();
 
+// Every route with a patient id (/:id/...) is limited to the therapist who owns
+// that patient; admins can open any patient. Unknown and other therapists'
+// patients get the same 404, so patient ids can't be probed.
+router.param('id', async (req, res, next, id) => {
+  const clientId = Number(id);
+  if (!Number.isInteger(clientId) || clientId <= 0) {
+    return res.status(400).json({ error: 'Invalid client id.' });
+  }
+
+  const user = req.session.user;
+  if (user.role === 'admin') {
+    return next();
+  }
+
+  try {
+    const { db } = require('../db/database');
+    const owner = await db.get('SELECT created_by FROM clients WHERE id = $1', [clientId]);
+    if (!owner || Number(owner.created_by) !== Number(user.id)) {
+      return res.status(404).json({ error: 'Client not found.' });
+    }
+    return next();
+  } catch (error) {
+    console.error('Client access check error:', error.message);
+    return res.status(500).json({ error: 'Failed to check client access.' });
+  }
+});
+
 // NIF (Portuguese fiscal number) validation
 function isValidNIF(nif) {
   if (!nif) return true; // optional field

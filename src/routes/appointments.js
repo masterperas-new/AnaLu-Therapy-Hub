@@ -62,7 +62,10 @@ async function resolveFeeCents(clientId, feeAmount) {
   return getDefaultFeeCents();
 }
 
-async function ensureClientForTherapist(clientId, therapistUserId) {
+// Returns the id of the therapist's own record for this patient.
+// Only an admin may schedule a patient for another therapist; the patient is then
+// copied to that therapist. A therapist can only use their own patients.
+async function ensureClientForTherapist(clientId, therapistUserId, allowCopy) {
   const { db } = require("../db/database");
   const sourceClient = await db.get(
     `
@@ -79,6 +82,11 @@ async function ensureClientForTherapist(clientId, therapistUserId) {
 
   if (Number(sourceClient.created_by) === Number(therapistUserId)) {
     return Number(sourceClient.id);
+  }
+
+  if (!allowCopy) {
+    // Same message as a missing patient, so other therapists' patient ids aren't revealed
+    throw new Error('Client not found.');
   }
 
   const result = await db.run(
@@ -309,7 +317,7 @@ router.post('/', async (req, res) => {
 
     let effectiveClientId;
     try {
-      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId);
+      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId, user.role === 'admin');
     } catch (clientErr) {
       return res.status(400).json({ error: clientErr.message });
     }
@@ -417,7 +425,7 @@ router.post('/batch', async (req, res) => {
 
     let effectiveClientId;
     try {
-      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId);
+      effectiveClientId = await ensureClientForTherapist(clientId, assignedUserId, user.role === 'admin');
     } catch (clientErr) {
       return res.status(400).json({ error: clientErr.message });
     }
@@ -522,7 +530,7 @@ router.put('/:id', async (req, res) => {
 
     let effectiveClientId;
     try {
-      effectiveClientId = await ensureClientForTherapist(clientId, targetUserId);
+      effectiveClientId = await ensureClientForTherapist(clientId, targetUserId, user.role === 'admin');
     } catch (clientErr) {
       return res.status(400).json({ error: clientErr.message });
     }
