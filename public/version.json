@@ -1,7 +1,15 @@
 {
-  "version": "2.13.0",
-  "releaseDate": "2026-10-29",
+  "version": "2.13.1",
+  "releaseDate": "2026-11-04",
   "history": [
+    {
+      "version": "2.13.1",
+      "date": "2026-11-04",
+      "summary": "Test release to check the deployment pipeline.",
+      "changes": [
+        "Version bump only, no functional changes"
+      ]
+    },
     {
       "version": "2.13.0",
       "date": "2026-10-29",
